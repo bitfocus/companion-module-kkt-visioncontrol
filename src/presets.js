@@ -276,18 +276,18 @@ module.exports = function (self) {
 
 	// ---- Status ---------------------------------------------------------------
 
-	presets['devices_online'] = {
+	presets['network_devices'] = {
 		type: 'button',
 		category: 'Status',
-		name: 'Geräte online (grün / orange / rot)',
+		name: 'Netzwerk-Geräte und App erreichbar (grün / rot)',
 		style: {
-			text: `Online\n$(${label}:devices_online)/$(${label}:devices_total)`,
-			size: '18',
+			text: `Netzwerk\n$(${label}:network_devices) Geräte`,
+			size: '14',
 			color: WHITE,
 			bgcolor: combineRgb(40, 40, 40),
 		},
 		steps: [{ down: [], up: [] }],
-		feedbacks: [{ feedbackId: 'devices_status', options: {} }],
+		feedbacks: [{ feedbackId: 'network_status', options: {} }],
 	}
 
 	presets['status'] = {
