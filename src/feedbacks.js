@@ -1,6 +1,7 @@
 const { combineRgb } = require('@companion-module/base')
 const { CATALOG, CATALOG_BY_ID, COLORS } = require('./effects-data')
 const { tile, overlay, icon } = require('./icons')
+const { sceneChoices } = require('./scenes')
 
 const BLACK = combineRgb(0, 0, 0)
 
@@ -53,7 +54,16 @@ function UpdateFeedbacks(self) {
 				bgcolor: combineRgb(0, 153, 51),
 				color: WHITE,
 			},
-			options: [{ id: 'itemId', type: 'textinput', label: 'Item-ID', default: '' }],
+			options: [
+				{
+					id: 'itemId',
+					type: 'dropdown',
+					label: 'Szene / Sequenz',
+					default: sceneChoices(self.scenes)[0].id,
+					choices: sceneChoices(self.scenes),
+					allowCustom: true,
+				},
+			],
 			callback: (feedback) => {
 				return !!self.sceneActive[String(feedback.options.itemId).trim()]
 			},

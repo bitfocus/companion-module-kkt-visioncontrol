@@ -50,6 +50,7 @@ $map = [ordered]@{
 	turtle   = 'maui_turtle'
 	range    = 'maui_fx_range'
 	info     = 'maui_info'
+	sequence = 'maui_sequence'
 }
 
 function Save-Resized([string]$inFile, [string]$outFile, [int]$size) {

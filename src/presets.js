@@ -2,6 +2,7 @@ const { combineRgb } = require('@companion-module/base')
 const { icon, tile } = require('./icons')
 const { CATALOG, COLORS } = require('./effects-data')
 const { labelText } = require('./labels')
+const { sceneName, sceneFolder, isSequence } = require('./scenes')
 
 const WHITE = combineRgb(255, 255, 255)
 const BLACK = combineRgb(0, 0, 0)
@@ -217,11 +218,32 @@ module.exports = function (self) {
 		feedbacks: [],
 	}
 
-	// ---- Szenen (Beispiele, Item-ID anpassen) ---------------------------------
+	// ---- Szenen: automatisch aus der App ----------------------------------------
+	// Der Tastentext ist die Namens-Variable der Szene, damit Umbenennungen in
+	// der App auch bereits platzierte Tasten erreichen.
 
 	const ACTIVE = { bgcolor: combineRgb(0, 153, 51), color: WHITE }
+	const scenes = Array.isArray(self.scenes) ? self.scenes : []
 
-	for (const id of ['1', '2', '3', '4']) {
+	for (const s of scenes) {
+		const id = String(s.ItemId)
+		const name = sceneName(s)
+		const folder = sceneFolder(s)
+		const seq = isSequence(s)
+		const style = look(name, [30, 30, 30], seq ? 'sequence' : 'scene')
+		style.text = `$(${label}:scene_${id}_name)`
+		presets[`scene_${id}`] = {
+			type: 'button',
+			category: folder ? `Szenen: ${folder}` : 'Szenen',
+			name: `${seq ? 'Sequenz' : 'Szene'}: ${name}`,
+			style,
+			steps: [{ down: [{ actionId: 'scene_toggle', options: { itemId: id } }], up: [] }],
+			feedbacks: [{ feedbackId: 'scene_active', options: { itemId: id }, style: ACTIVE }],
+		}
+	}
+
+	// Noch keine Szenen in der App: Beispieltasten mit Item-ID
+	for (const id of scenes.length ? [] : ['1', '2', '3', '4']) {
 		presets[`scene_toggle_${id}`] = {
 			type: 'button',
 			category: 'Szenen',
@@ -232,22 +254,24 @@ module.exports = function (self) {
 		}
 	}
 
-	presets['scene_on_example'] = {
-		type: 'button',
-		category: 'Szenen',
-		name: 'Szene An (Beispiel ID 1)',
-		style: look('Szene 1 An', [0, 102, 0], 'play'),
-		steps: [{ down: [{ actionId: 'scene_on', options: { itemId: '1' } }], up: [] }],
-		feedbacks: [{ feedbackId: 'scene_active', options: { itemId: '1' }, style: ACTIVE }],
-	}
+	if (!scenes.length) {
+		presets['scene_on_example'] = {
+			type: 'button',
+			category: 'Szenen',
+			name: 'Szene An (Beispiel ID 1)',
+			style: look('Szene 1 An', [0, 102, 0], 'play'),
+			steps: [{ down: [{ actionId: 'scene_on', options: { itemId: '1' } }], up: [] }],
+			feedbacks: [{ feedbackId: 'scene_active', options: { itemId: '1' }, style: ACTIVE }],
+		}
 
-	presets['scene_off_example'] = {
-		type: 'button',
-		category: 'Szenen',
-		name: 'Szene Aus (Beispiel ID 1)',
-		style: look('Szene 1 Aus', [102, 0, 0], 'pause'),
-		steps: [{ down: [{ actionId: 'scene_off', options: { itemId: '1' } }], up: [] }],
-		feedbacks: [],
+		presets['scene_off_example'] = {
+			type: 'button',
+			category: 'Szenen',
+			name: 'Szene Aus (Beispiel ID 1)',
+			style: look('Szene 1 Aus', [102, 0, 0], 'pause'),
+			steps: [{ down: [{ actionId: 'scene_off', options: { itemId: '1' } }], up: [] }],
+			feedbacks: [],
+		}
 	}
 
 	// ---- Status ---------------------------------------------------------------

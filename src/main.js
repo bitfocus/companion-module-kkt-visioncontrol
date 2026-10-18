@@ -5,6 +5,7 @@ const UpdateFeedbacks = require('./feedbacks')
 const UpdateVariableDefinitions = require('./variables')
 const UpdatePresets = require('./presets')
 const { findContent, describeActive, adjustContent, fingerprintOfEntry } = require('./active')
+const { sceneName, scenesSignature } = require('./scenes')
 
 const REQUEST_TIMEOUT_MS = 5000
 const MAX_TRANSIENT_RETRIES = 3
@@ -23,6 +24,8 @@ class VisionControlInstance extends InstanceBase {
 		this.programmer = null // letzter Stand aus GET /Control
 		this.lastSent = {} // 'group:0' -> { id, fp } zuletzt vom Modul gesendeter Katalog-Effekt
 		this.refreshTimer = null
+		this.scenesSig = '' // Vergleichsschlüssel der Szenenliste
+		this.scenesReadError = null
 	}
 
 	async init(config) {
@@ -184,13 +187,29 @@ class VisionControlInstance extends InstanceBase {
 			}
 
 			const sres = await this.http('GET', '/Scenes', undefined, true)
+			let scenes = []
 			if (sres.ok) {
-				const scenes = await sres.json()
-				this.scenes = Array.isArray(scenes) ? scenes : []
-				this.sceneActive = {}
-				for (const s of this.scenes) {
-					this.sceneActive[String(s.ItemId)] = !!s.Active
-				}
+				const data = await sres.json()
+				scenes = Array.isArray(data) ? data : []
+				this.scenesReadError = null
+			} else if (this.scenesReadError !== sres.status) {
+				// Die App antwortet mit HTTP 500, wenn keine Szenen angelegt sind
+				this.scenesReadError = sres.status
+				this.log('info', `Szenenliste nicht lesbar (HTTP ${sres.status}). Vermutlich sind in der App noch keine Szenen angelegt.`)
+			}
+			this.scenes = scenes
+			this.sceneActive = {}
+			for (const s of this.scenes) {
+				this.sceneActive[String(s.ItemId)] = !!s.Active
+			}
+			// Neue, gelöschte, umbenannte oder verschobene Szenen: Definitionen neu aufbauen
+			const sig = scenesSignature(this.scenes)
+			if (sig !== this.scenesSig) {
+				this.scenesSig = sig
+				this.updateActions()
+				this.updateFeedbacks()
+				this.updateVariableDefinitions()
+				this.updatePresets()
 			}
 
 			await this.readProgrammer()
@@ -210,7 +229,13 @@ class VisionControlInstance extends InstanceBase {
 
 	updateVariables() {
 		const a = this.activeFor('group', Number(this.config && this.config.statusGroup) || 0)
+		const sceneVars = {}
+		for (const s of this.scenes || []) {
+			sceneVars[`scene_${s.ItemId}_name`] = sceneName(s)
+			sceneVars[`scene_${s.ItemId}_active`] = s.Active ? 'true' : 'false'
+		}
 		this.setVariableValues({
+			...sceneVars,
 			connection: this.connected ? 'connected' : 'disconnected',
 			network_name: (this.network && this.network.Name) || '',
 			network_id: (this.network && this.network.Identifier) || '',

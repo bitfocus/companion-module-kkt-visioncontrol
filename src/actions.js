@@ -1,6 +1,7 @@
 const { combineRgb } = require('@companion-module/base')
 const { CATALOG, CATALOG_BY_ID } = require('./effects-data')
 const { buildEffectContent } = require('./fx')
+const { sceneChoices } = require('./scenes')
 
 const CATALOG_CHOICES = CATALOG.map((e) => ({ id: e.id, label: `${e.cat}: ${e.name}` }))
 
@@ -81,30 +82,47 @@ const GEOMETRY = [
 ]
 
 module.exports = function (self) {
+	// Szenen aus der App als Auswahl; eigene Item-ID oder Variable bleibt möglich
+	const sceneList = sceneChoices(self.scenes)
+	const sceneOption = () => ({
+		id: 'itemId',
+		type: 'dropdown',
+		label: 'Szene / Sequenz',
+		default: sceneList[0].id,
+		choices: sceneList,
+		allowCustom: true,
+		tooltip: 'Szenen aus der Vision Control App. Eigene Item-ID oder Variable ist ebenfalls möglich.',
+	})
+	const sceneId = async (raw) => {
+		const id = String(await self.parseVariablesInString(String(raw ?? ''))).trim()
+		if (!id) throw new Error('Keine Szene gewählt')
+		return id
+	}
+
 	self.setActionDefinitions({
 		scene_on: {
 			name: 'Szene / Sequenz: An',
-			options: [{ id: 'itemId', type: 'textinput', label: 'Item-ID', default: '', useVariables: true }],
+			options: [sceneOption()],
 			callback: async (event) => {
-				const id = await self.parseVariablesInString(event.options.itemId)
-				await self.http('POST', `/Scenes/${encodeURIComponent(id.trim())}/On`)
+				const id = await sceneId(event.options.itemId)
+				await self.http('POST', `/Scenes/${encodeURIComponent(id)}/On`)
 			},
 		},
 
 		scene_off: {
 			name: 'Szene / Sequenz: Aus',
-			options: [{ id: 'itemId', type: 'textinput', label: 'Item-ID', default: '', useVariables: true }],
+			options: [sceneOption()],
 			callback: async (event) => {
-				const id = await self.parseVariablesInString(event.options.itemId)
-				await self.http('POST', `/Scenes/${encodeURIComponent(id.trim())}/Off`)
+				const id = await sceneId(event.options.itemId)
+				await self.http('POST', `/Scenes/${encodeURIComponent(id)}/Off`)
 			},
 		},
 
 		scene_toggle: {
 			name: 'Szene / Sequenz: Umschalten',
-			options: [{ id: 'itemId', type: 'textinput', label: 'Item-ID', default: '', useVariables: true }],
+			options: [sceneOption()],
 			callback: async (event) => {
-				const id = (await self.parseVariablesInString(event.options.itemId)).trim()
+				const id = await sceneId(event.options.itemId)
 				const isOn = !!self.sceneActive[String(id)]
 				await self.http('POST', `/Scenes/${encodeURIComponent(id)}/${isOn ? 'Off' : 'On'}`)
 				// Lokalen Status sofort umschalten, damit schnelle Mehrfachklicks
