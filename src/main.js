@@ -4,6 +4,7 @@ const UpdateActions = require('./actions')
 const UpdateFeedbacks = require('./feedbacks')
 const UpdateVariableDefinitions = require('./variables')
 const UpdatePresets = require('./presets')
+const { findContent, describeActive, adjustContent, fingerprintOfEntry } = require('./active')
 
 const REQUEST_TIMEOUT_MS = 5000
 const MAX_TRANSIENT_RETRIES = 3
@@ -19,6 +20,9 @@ class VisionControlInstance extends InstanceBase {
 		this.sceneActive = {} // itemId -> bool
 		this.network = { Name: '', Identifier: '' }
 		this.pollTimer = null
+		this.programmer = null // letzter Stand aus GET /Control
+		this.lastSent = {} // 'group:0' -> { id, fp } zuletzt vom Modul gesendeter Katalog-Effekt
+		this.refreshTimer = null
 	}
 
 	async init(config) {
@@ -36,6 +40,10 @@ class VisionControlInstance extends InstanceBase {
 		if (this.pollTimer) {
 			clearInterval(this.pollTimer)
 			this.pollTimer = null
+		}
+		if (this.refreshTimer) {
+			clearTimeout(this.refreshTimer)
+			this.refreshTimer = null
 		}
 		this.token = null
 		this.log('debug', 'destroy')
@@ -61,6 +69,7 @@ class VisionControlInstance extends InstanceBase {
 			{ type: 'textinput', id: 'port', label: 'Port', width: 3, default: '5123', regex: Regex.PORT },
 			{ type: 'textinput', id: 'password', label: 'Netzwerk-Passwort', width: 6 },
 			{ type: 'number', id: 'poll', label: 'Abfrage-Intervall (ms)', width: 3, default: 2000, min: 500, max: 60000 },
+			{ type: 'textinput', id: 'statusGroup', label: 'Gruppe für Statusanzeige (GroupID)', width: 4, default: '0' },
 		]
 	}
 
@@ -184,9 +193,11 @@ class VisionControlInstance extends InstanceBase {
 				}
 			}
 
+			await this.readProgrammer()
+
 			this.connected = true
 			this.updateStatus(InstanceStatus.Ok)
-			this.checkFeedbacks('scene_active', 'connected')
+			this.checkFeedbacks('scene_active', 'connected', 'effect_active', 'color_active')
 			this.updateVariables()
 		} catch (e) {
 			this.connected = false
@@ -198,12 +209,65 @@ class VisionControlInstance extends InstanceBase {
 	}
 
 	updateVariables() {
+		const a = this.activeFor('group', Number(this.config && this.config.statusGroup) || 0)
 		this.setVariableValues({
 			connection: this.connected ? 'connected' : 'disconnected',
 			network_name: (this.network && this.network.Name) || '',
 			network_id: (this.network && this.network.Identifier) || '',
 			scene_count: Array.isArray(this.scenes) ? this.scenes.length : 0,
+			active_effect: a.name,
+			active_effect_id: a.id || '',
+			active_category: a.category,
+			active_seconds: a.seconds === null ? '' : `${a.seconds.toFixed(2).replace('.', ',')} s`,
+			active_dimmer: a.dimmerPct === null ? '' : `${a.dimmerPct} %`,
+			active_range: a.range === null ? '' : String(a.range),
 		})
+	}
+
+	// ---- Aktiver Effekt -------------------------------------------------------
+
+	async readProgrammer() {
+		const res = await this.http('GET', '/Control', undefined, true)
+		if (res.ok) this.programmer = await res.json()
+		return this.programmer
+	}
+
+	/** Was läuft gerade auf Gruppe/Fixture? (aus dem zuletzt gelesenen Stand) */
+	activeFor(target, id) {
+		return describeActive(findContent(this.programmer, target, id), this.lastSent[`${target}:${id}`])
+	}
+
+	/** Vom Modul gesendeten Katalog-Effekt merken, damit er auch mit Überschreibungen erkannt wird */
+	markSent(target, id, catalogId, entry) {
+		this.lastSent[`${target}:${id}`] = { id: catalogId, fp: fingerprintOfEntry(entry) }
+		this.scheduleRefresh()
+	}
+
+	/** Programmer kurz nach einer Änderung neu lesen, damit Feedbacks sofort stimmen */
+	scheduleRefresh(delay = 250) {
+		if (this.refreshTimer) clearTimeout(this.refreshTimer)
+		this.refreshTimer = setTimeout(async () => {
+			this.refreshTimer = null
+			try {
+				await this.readProgrammer()
+				this.checkFeedbacks('effect_active', 'color_active')
+				this.updateVariables()
+			} catch (e) {
+				this.log('debug', `Aktualisierung fehlgeschlagen: ${e.message || e}`)
+			}
+		}, delay)
+	}
+
+	/** Laufenden Effekt anpassen: faster, slower, brighter, darker, range_up, range_down */
+	async adjustActive(target, id, what, percent, rangeStep) {
+		await this.readProgrammer()
+		const partial = adjustContent(findContent(this.programmer, target, id), what, percent, rangeStep)
+		if (!partial) {
+			this.log('warn', `Anpassen "${what}" nicht möglich: Auf ${target} ${id} läuft kein passender Effekt.`)
+			return
+		}
+		await this.setControl(target, id, partial, 0)
+		this.scheduleRefresh()
 	}
 
 	// ---- Steuer-Helfer --------------------------------------------------------

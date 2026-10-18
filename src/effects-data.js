@@ -106,8 +106,8 @@ const CATALOG = [
 	{ id: 'fit_empfang', cat: 'Fitness: Bereiche', name: 'Empfang', effect: 0, colors: [[0, 170, 160], [0, 90, 120], [170, 220, 255]], sec: 8, soft: 0.95, dimmer: 80 },
 	{ id: 'fit_cardio', cat: 'Fitness: Bereiche', name: 'Cardio', effect: 18, geometry: 2, colors: [[255, 110, 0], [255, 30, 30], [255, 170, 0]], sec: 0.8, soft: 0.7, dimmer: 90 },
 	{ id: 'fit_kraft', cat: 'Fitness: Bereiche', name: 'Kraft', effect: 5, geometry: 2, colors: [[200, 0, 0], [80, 0, 0], [30, 40, 90]], sec: 2, soft: 0.8, dimmer: 85 },
-	{ id: 'fit_functional', cat: 'Fitness: Bereiche', name: 'Functional', effect: 8, geometry: 2, colors: [[255, 200, 0], [255, 100, 0], K], sec: 0.6, soft: 0.5, dimmer: 90 },
-	{ id: 'fit_stretching', cat: 'Fitness: Bereiche', name: 'Stretching', effect: 0, colors: [[150, 110, 255], [0, 190, 180], [255, 140, 200]], sec: 7, soft: 0.95, dimmer: 60 },
+	{ id: 'fit_functional', cat: 'Fitness: Bereiche', name: 'Athletik', effect: 8, geometry: 2, colors: [[255, 200, 0], [255, 100, 0], K], sec: 0.6, soft: 0.5, dimmer: 90 },
+	{ id: 'fit_stretching', cat: 'Fitness: Bereiche', name: 'Stretch', effect: 0, colors: [[150, 110, 255], [0, 190, 180], [255, 140, 200]], sec: 7, soft: 0.95, dimmer: 60 },
 	{ id: 'fit_wellness', cat: 'Fitness: Bereiche', name: 'Wellness', effect: 0, colors: [[255, 180, 110], [255, 140, 40], [255, 200, 160]], sec: 9, soft: 0.95, dimmer: 55 },
 
 	// ---- Fitnessstudio: Kurse (Energie-Verlauf einer Stunde) -------------------

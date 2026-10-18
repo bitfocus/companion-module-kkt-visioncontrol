@@ -1,23 +1,27 @@
 const { combineRgb } = require('@companion-module/base')
 const { icon, tile } = require('./icons')
 const { CATALOG, COLORS } = require('./effects-data')
+const { labelText } = require('./labels')
 
 const WHITE = combineRgb(255, 255, 255)
 const BLACK = combineRgb(0, 0, 0)
+const ORANGE = combineRgb(255, 122, 0)
 
-// Schriftgröße wie bei normalen Companion-Buttons: automatisch.
-const SIZE = 'auto'
+// Größte Schriftstufe: Kacheln haben unten nur einen schmalen Streifen
+const TILE_MAX_FONT = 18
+const GLYPH_MAX_FONT = 24
 
 function textOn(r, g, b) {
 	const luminance = 0.299 * r + 0.587 * g + 0.114 * b
 	return luminance > 150 ? BLACK : WHITE
 }
 
-// Stil mit App-Symbol (Glyphe oben, Text unten) für Steuer-Tasten.
+// Steuer-Taste mit App-Symbol oben, Text unten (eine der drei Schriftstufen)
 function look(text, bgRgb, iconKey) {
 	const [r, g, b] = bgRgb
 	const color = textOn(r, g, b)
-	const style = { text, size: SIZE, color, bgcolor: combineRgb(r, g, b) }
+	const lbl = labelText(text, GLYPH_MAX_FONT)
+	const style = { text: lbl.text, size: lbl.size, color, bgcolor: combineRgb(r, g, b) }
 	const png = iconKey ? icon(iconKey, color === BLACK ? 'dark' : 'light') : undefined
 	if (png) {
 		style.png64 = png
@@ -27,17 +31,24 @@ function look(text, bgRgb, iconKey) {
 	return style
 }
 
-// Stil mit Kachel im App-Stil (Farbverlauf + Motiv), Text weiß auf dunklem Streifen.
-// Fällt ohne Kachel auf einen einfarbigen Button zurück.
+// Kachel im App-Stil; Text weiß auf dunklem Streifen
 function tileLook(text, tileId, fallbackRgb) {
 	const png = tile(tileId)
 	if (!png) return look(text, fallbackRgb, null)
-	return { text, size: SIZE, color: WHITE, bgcolor: BLACK, png64: png, pngalignment: 'center:center', alignment: 'center:bottom' }
+	const lbl = labelText(text, TILE_MAX_FONT)
+	return { text: lbl.text, size: lbl.size, color: WHITE, bgcolor: BLACK, png64: png, pngalignment: 'center:center', alignment: 'center:bottom' }
+}
+
+// Feedback-Stil "aktiv": Kachel mit orangem Rahmen, sonst orange Fläche
+function activeStyle(tileId) {
+	const png = tile(`${tileId}_active`)
+	return png ? { png64: png } : { bgcolor: ORANGE, color: WHITE }
 }
 
 module.exports = function (self) {
 	const presets = {}
 	const GROUP = '0'
+	const label = self.label || 'visioncontrol'
 
 	// ---- Steuerung ------------------------------------------------------------
 
@@ -109,7 +120,7 @@ module.exports = function (self) {
 					up: [],
 				},
 			],
-			feedbacks: [],
+			feedbacks: [{ feedbackId: 'color_active', options: { color: c.key, target: 'group', id: GROUP }, style: activeStyle(`color_${c.key}`) }],
 		}
 	}
 
@@ -123,12 +134,86 @@ module.exports = function (self) {
 			style: tileLook(e.name, e.id, e.colors[0]),
 			steps: [
 				{
-					down: [{ actionId: 'vision_effect', options: { target: 'group', id: GROUP, effect: e.id, overrideDimmer: false, dimmer: 100 } }],
+					down: [
+						{
+							actionId: 'vision_effect',
+							options: {
+								target: 'group',
+								id: GROUP,
+								effect: e.id,
+								overrideDimmer: false,
+								dimmer: 100,
+								overrideTiming: false,
+								sec: 1.2,
+								soft: 80,
+								overrideRange: false,
+								range: 10,
+								overrideColors: false,
+								c1: combineRgb(255, 0, 0),
+								c2: combineRgb(0, 0, 255),
+								useC3: false,
+								c3: combineRgb(0, 255, 0),
+								reverse: false,
+							},
+						},
+					],
 					up: [],
 				},
 			],
+			feedbacks: [{ feedbackId: 'effect_active', options: { effect: e.id, target: 'group', id: GROUP }, style: activeStyle(e.id) }],
+		}
+	}
+
+	// ---- Laufender Effekt (anpassen und anzeigen) -----------------------------
+
+	const ADJUST = [
+		{ key: 'faster', name: 'Schneller', icon: 'rabbit' },
+		{ key: 'slower', name: 'Langsamer', icon: 'turtle' },
+		{ key: 'brighter', name: 'Heller', icon: 'full_on' },
+		{ key: 'darker', name: 'Dunkler', icon: 'blackout' },
+		{ key: 'range_up', name: 'Range +', icon: 'range' },
+		{ key: 'range_down', name: 'Range −', icon: 'range' },
+	]
+	for (const a of ADJUST) {
+		presets[`adjust_${a.key}`] = {
+			type: 'button',
+			category: 'Laufender Effekt',
+			name: a.name,
+			style: look(a.name, [40, 40, 40], a.icon),
+			steps: [{ down: [{ actionId: 'adjust_effect', options: { target: 'group', id: GROUP, what: a.key, percent: 20, rangeStep: 5 } }], up: [] }],
 			feedbacks: [],
 		}
+	}
+
+	presets['active_info'] = {
+		type: 'button',
+		category: 'Laufender Effekt',
+		name: 'Anzeige: aktiver Effekt',
+		style: {
+			text: `$(${label}:active_effect)`,
+			size: '14',
+			color: WHITE,
+			bgcolor: combineRgb(40, 40, 40),
+			png64: icon('info', 'light'),
+			pngalignment: 'center:top',
+			alignment: 'center:bottom',
+		},
+		steps: [{ down: [], up: [] }],
+		feedbacks: [],
+	}
+
+	presets['active_tempo'] = {
+		type: 'button',
+		category: 'Laufender Effekt',
+		name: 'Anzeige: Tempo und Helligkeit',
+		style: {
+			text: `$(${label}:active_seconds)\n$(${label}:active_dimmer)`,
+			size: '14',
+			color: WHITE,
+			bgcolor: combineRgb(40, 40, 40),
+		},
+		steps: [{ down: [], up: [] }],
+		feedbacks: [],
 	}
 
 	// ---- Szenen (Beispiele, Item-ID anpassen) ---------------------------------

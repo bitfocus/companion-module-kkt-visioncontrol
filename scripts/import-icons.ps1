@@ -46,6 +46,10 @@ $map = [ordered]@{
 	play     = 'maui_play'
 	pause    = 'maui_pause'
 	status   = 'maui_signal'
+	rabbit   = 'maui_rabbit'
+	turtle   = 'maui_turtle'
+	range    = 'maui_fx_range'
+	info     = 'maui_info'
 }
 
 function Save-Resized([string]$inFile, [string]$outFile, [int]$size) {

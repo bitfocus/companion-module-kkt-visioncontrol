@@ -11,6 +11,14 @@ const TIMING_OPTIONS = (sec, softPct) => [
 	{ id: 'soft', type: 'number', label: 'Weichheit % (Anteil Überblendung)', default: softPct, min: 0, max: 100 },
 ]
 
+// Feld nur zeigen, wenn die Checkbox gesetzt ist (neue und ältere Companion-Versionen)
+function visibleIf(checkboxId) {
+	return {
+		isVisibleExpression: `$(options:${checkboxId})`,
+		isVisible: new Function('options', `return !!options['${checkboxId}']`),
+	}
+}
+
 // Neue Tasten liefern sec/soft; ältere Tasten noch step/fade/speed.
 function timingFrom(o) {
 	if (o.sec !== undefined && o.sec !== null && o.sec !== '') return { sec: Number(o.sec), soft: (Number(o.soft) || 0) / 100 }
@@ -243,16 +251,70 @@ module.exports = function (self) {
 				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
 				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: true },
 				{ id: 'effect', type: 'dropdown', label: 'Effekt', default: CATALOG[0].id, choices: CATALOG_CHOICES },
-				{ id: 'overrideDimmer', type: 'checkbox', label: 'Eigene Helligkeit statt Katalogwert', default: false },
-				{ id: 'dimmer', type: 'number', label: 'Helligkeit %', default: 100, min: 0, max: 100 },
+				{ id: 'overrideDimmer', type: 'checkbox', label: 'Helligkeit überschreiben', default: false },
+				{ id: 'dimmer', type: 'number', label: 'Helligkeit %', default: 100, min: 0, max: 100, ...visibleIf('overrideDimmer') },
+				{ id: 'overrideTiming', type: 'checkbox', label: 'Tempo überschreiben', default: false },
+				{ id: 'sec', type: 'number', label: 'Sekunden pro Farbschritt', default: 1.2, min: 0.05, max: 120, step: 0.05, ...visibleIf('overrideTiming') },
+				{ id: 'soft', type: 'number', label: 'Weichheit % (Anteil Überblendung)', default: 80, min: 0, max: 100, ...visibleIf('overrideTiming') },
+				{ id: 'overrideRange', type: 'checkbox', label: 'Range überschreiben (nur Muster)', default: false },
+				{ id: 'range', type: 'number', label: 'Range (0 = alle Pixel gleich, Standard 10)', default: 10, min: 0, max: 255, ...visibleIf('overrideRange') },
+				{ id: 'overrideColors', type: 'checkbox', label: 'Farben überschreiben', default: false },
+				{ id: 'c1', type: 'colorpicker', label: 'Farbe 1', default: combineRgb(255, 0, 0), ...visibleIf('overrideColors') },
+				{ id: 'c2', type: 'colorpicker', label: 'Farbe 2', default: combineRgb(0, 0, 255), ...visibleIf('overrideColors') },
+				{ id: 'useC3', type: 'checkbox', label: 'Dritte Farbe verwenden', default: false, ...visibleIf('overrideColors') },
+				{ id: 'c3', type: 'colorpicker', label: 'Farbe 3', default: combineRgb(0, 255, 0), ...visibleIf('overrideColors') },
+				{ id: 'reverse', type: 'checkbox', label: 'Richtung umkehren', default: false },
 			],
 			callback: async (event) => {
 				const o = event.options
-				const entry = CATALOG_BY_ID[o.effect]
-				if (!entry) throw new Error(`Unbekannter Katalog-Effekt: ${o.effect}`)
+				const base = CATALOG_BY_ID[o.effect]
+				if (!base) throw new Error(`Unbekannter Katalog-Effekt: ${o.effect}`)
 				const id = Number(await self.parseVariablesInString(o.id))
-				const content = buildEffectContent(o.overrideDimmer ? { ...entry, dimmer: o.dimmer } : entry)
+				const entry = { ...base }
+				if (o.overrideDimmer) entry.dimmer = o.dimmer
+				if (o.overrideTiming) Object.assign(entry, { sec: Number(o.sec), soft: (Number(o.soft) || 0) / 100 })
+				if (o.overrideRange) entry.range = o.range
+				if (o.overrideColors) {
+					const rgb = (c) => {
+						const { r, g, b } = splitRgb(c)
+						return [r, g, b]
+					}
+					entry.colors = [rgb(o.c1), rgb(o.c2)]
+					if (o.useC3) entry.colors.push(rgb(o.c3))
+				}
+				if (o.reverse) entry.reverse = true
+				const content = buildEffectContent(entry)
 				await self.setControl(o.target, id, content, 0)
+				self.markSent(o.target, id, base.id, entry)
+			},
+		},
+
+		adjust_effect: {
+			name: 'Laufenden Effekt anpassen (Tempo, Helligkeit, Range)',
+			options: [
+				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: true },
+				{
+					id: 'what',
+					type: 'dropdown',
+					label: 'Änderung',
+					default: 'faster',
+					choices: [
+						{ id: 'faster', label: 'Schneller' },
+						{ id: 'slower', label: 'Langsamer' },
+						{ id: 'brighter', label: 'Heller' },
+						{ id: 'darker', label: 'Dunkler' },
+						{ id: 'range_up', label: 'Range erhöhen (breiter verteilt)' },
+						{ id: 'range_down', label: 'Range verringern' },
+					],
+				},
+				{ id: 'percent', type: 'number', label: 'Schritt in % (Tempo / Helligkeit)', default: 20, min: 1, max: 100 },
+				{ id: 'rangeStep', type: 'number', label: 'Schritt Range-Punkte', default: 5, min: 1, max: 100 },
+			],
+			callback: async (event) => {
+				const o = event.options
+				const id = Number(await self.parseVariablesInString(o.id))
+				await self.adjustActive(o.target, id, o.what, Number(o.percent) || 20, Number(o.rangeStep) || 5)
 			},
 		},
 

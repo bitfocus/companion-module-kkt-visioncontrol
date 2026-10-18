@@ -16,6 +16,11 @@ const crypto = require('crypto')
 const { execSync } = require('child_process')
 const { Resvg } = require('@resvg/resvg-js')
 const { CATALOG, COLORS, MOTIFS, motifFor } = require('../src/effects-data')
+const { labelText } = require('../src/labels')
+
+// Größte Schriftstufe auf Kacheln (der Streifen unten ist niedrig)
+const TILE_MAX_FONT = 18
+const ACTIVE_COLOR = '#FF7A00'
 
 const OUT = path.join(__dirname, '..', 'icons')
 const SIZE = 72
@@ -72,10 +77,19 @@ function nest(svg, x, y, size) {
 const hex = ([r, g, b]) => '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')
 const mix = ([r, g, b], f) => [r, g, b].map((v) => Math.round(f >= 0 ? v + (255 - v) * f : v * (1 + f)))
 
-function tileSvg(colors, motifSvg) {
+/**
+ * @param {number[][]} colors
+ * @param {string|null} motifSvg
+ * @param {{ lines?: number, active?: boolean }} opts  lines = Zeilen der Beschriftung
+ */
+function tileSvg(colors, motifSvg, opts = {}) {
 	const stops = colors.length === 1 ? [mix(colors[0], 0.35), colors[0], mix(colors[0], -0.35)] : colors
 	const stopTags = stops.map((c, i) => `<stop offset="${stops.length === 1 ? 0 : i / (stops.length - 1)}" stop-color="${hex(c)}"/>`).join('')
-	const motif = motifSvg ? nest(motifSvg, 16, 6, 40) : ''
+	const band = (opts.lines || 1) > 1 ? 34 : 22
+	const avail = SIZE - band - 6
+	const size = Math.min(40, avail)
+	const motif = motifSvg ? nest(motifSvg, (SIZE - size) / 2, 4 + (avail - size) / 2, size) : ''
+	const frame = opts.active ? `<rect x="1.75" y="1.75" width="${SIZE - 3.5}" height="${SIZE - 3.5}" rx="10.5" fill="none" stroke="${ACTIVE_COLOR}" stroke-width="3.5"/>` : ''
 	return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
 <defs>
 <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">${stopTags}</linearGradient>
@@ -84,7 +98,8 @@ function tileSvg(colors, motifSvg) {
 <g clip-path="url(#r)">
 <rect width="${SIZE}" height="${SIZE}" fill="url(#g)"/>
 ${motif}
-<rect x="0" y="50" width="${SIZE}" height="22" fill="#000" fill-opacity="0.45"/>
+<rect x="0" y="${SIZE - band}" width="${SIZE}" height="${band}" fill="#000" fill-opacity="0.45"/>
+${frame}
 </g>
 </svg>`
 }
@@ -101,12 +116,18 @@ function main() {
 	let n = 0
 	for (const e of CATALOG) {
 		const m = motifFor(e)
-		render(tileSvg(e.colors, m ? motifs[m] : null), path.join(OUT, `tile_${e.id}.png`))
-		n++
+		const lines = labelText(e.name, TILE_MAX_FONT).lineCount
+		for (const active of [false, true]) {
+			render(tileSvg(e.colors, m ? motifs[m] : null, { lines, active }), path.join(OUT, `tile_${e.id}${active ? '_active' : ''}.png`))
+			n++
+		}
 	}
 	for (const c of COLORS) {
-		render(tileSvg([c.rgb], null), path.join(OUT, `tile_color_${c.key}.png`))
-		n++
+		const lines = labelText(c.name, TILE_MAX_FONT).lineCount
+		for (const active of [false, true]) {
+			render(tileSvg([c.rgb], null, { lines, active }), path.join(OUT, `tile_color_${c.key}${active ? '_active' : ''}.png`))
+			n++
+		}
 	}
 	console.log(`${n} Kacheln erzeugt in ${OUT}`)
 
