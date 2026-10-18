@@ -7,6 +7,7 @@ const UpdatePresets = require('./presets')
 const { findContent, describeActive, adjustContent, fingerprintOfEntry } = require('./active')
 const { sceneName, scenesSignature } = require('./scenes')
 const { networkStatus } = require('./devices')
+const { readLocalScenes } = require('./localscenes')
 
 const REQUEST_TIMEOUT_MS = 5000
 const MAX_TRANSIENT_RETRIES = 3
@@ -76,6 +77,13 @@ class VisionControlInstance extends InstanceBase {
 			{ type: 'textinput', id: 'password', label: 'Netzwerk-Passwort', width: 6 },
 			{ type: 'number', id: 'poll', label: 'Abfrage-Intervall (ms)', width: 3, default: 2000, min: 500, max: 60000 },
 			{ type: 'textinput', id: 'statusGroup', label: 'Gruppe für Statusanzeige (GroupID)', width: 4, default: '0' },
+			{
+				type: 'checkbox',
+				id: 'localScenes',
+				label: 'Szenennamen aus den lokalen App-Dateien lesen, falls die API sie nicht liefert (nur wenn Companion auf demselben PC läuft)',
+				width: 12,
+				default: true,
+			},
 		]
 	}
 
@@ -195,10 +203,19 @@ class VisionControlInstance extends InstanceBase {
 				const data = await sres.json()
 				scenes = Array.isArray(data) ? data : []
 				this.scenesReadError = null
-			} else if (this.scenesReadError !== sres.status) {
-				// Die App antwortet mit HTTP 500, wenn keine Szenen angelegt sind
-				this.scenesReadError = sres.status
-				this.log('info', `Szenenliste nicht lesbar (HTTP ${sres.status}). Vermutlich sind in der App noch keine Szenen angelegt.`)
+			} else {
+				// Vision Control 2.17.3: GET /Scenes antwortet mit HTTP 500, auch wenn
+				// Szenen existieren. Rückfall: Namen aus den lokalen Szenendateien der App.
+				const useLocal = this.config.localScenes !== false
+				if (useLocal) scenes = readLocalScenes()
+				if (this.scenesReadError !== sres.status) {
+					this.scenesReadError = sres.status
+					this.log(
+						'warn',
+						`Szenenliste über die API nicht lesbar (HTTP ${sres.status}, Fehler der App).` +
+							(useLocal ? ` ${scenes.length} Szene(n) aus den lokalen App-Dateien übernommen.` : ''),
+					)
+				}
 			}
 			this.scenes = scenes
 			this.sceneActive = {}
@@ -325,6 +342,21 @@ class VisionControlInstance extends InstanceBase {
 	// ---- Steuer-Helfer --------------------------------------------------------
 
 	/**
+	 * Prüft, ob die App einen Befehl wirklich verarbeitet hat. Unbekannte Routen
+	 * beantwortet sie mit HTTP 200 und ihrer Doku-Seite, das wäre sonst ein
+	 * stiller Scheinerfolg.
+	 */
+	async expectHandled(res, what) {
+		const text = await res
+			.clone()
+			.text()
+			.catch(() => '')
+		if (res.ok && !text.includes('<title>API Documentation')) return text
+		if (res.ok) throw new Error(`${what}: Die App hat den Befehl nicht verarbeitet (in dieser App-Version nicht verfügbar).`)
+		throw new Error(`${what} fehlgeschlagen (HTTP ${res.status}) ${text.replace(/\s+/g, ' ').slice(0, 120)}`)
+	}
+
+	/**
 	 * Setzt ProgrammerContent auf eine Gruppe oder ein Fixture via POST /Control.
 	 * @param {'group'|'fixture'} target
 	 * @param {number} id        GroupID oder RDMID
@@ -346,10 +378,7 @@ class VisionControlInstance extends InstanceBase {
 			body.Groups.push({ GroupID: id, Content: content })
 		}
 		const res = await this.http('POST', '/Control', body)
-		if (!res.ok) {
-			const text = await res.text().catch(() => '')
-			throw new Error(`Steuerbefehl fehlgeschlagen (HTTP ${res.status}) ${text}`)
-		}
+		await this.expectHandled(res, 'Steuerbefehl')
 	}
 
 	// ---- Definitionen laden ---------------------------------------------------

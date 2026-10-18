@@ -105,7 +105,7 @@ module.exports = function (self) {
 			options: [sceneOption()],
 			callback: async (event) => {
 				const id = await sceneId(event.options.itemId)
-				await self.http('POST', `/Scenes/${encodeURIComponent(id)}/On`)
+				await self.expectHandled(await self.http('POST', `/Scenes/${encodeURIComponent(id)}/On`), 'Szene An')
 			},
 		},
 
@@ -114,7 +114,7 @@ module.exports = function (self) {
 			options: [sceneOption()],
 			callback: async (event) => {
 				const id = await sceneId(event.options.itemId)
-				await self.http('POST', `/Scenes/${encodeURIComponent(id)}/Off`)
+				await self.expectHandled(await self.http('POST', `/Scenes/${encodeURIComponent(id)}/Off`), 'Szene Aus')
 			},
 		},
 
@@ -124,7 +124,7 @@ module.exports = function (self) {
 			callback: async (event) => {
 				const id = await sceneId(event.options.itemId)
 				const isOn = !!self.sceneActive[String(id)]
-				await self.http('POST', `/Scenes/${encodeURIComponent(id)}/${isOn ? 'Off' : 'On'}`)
+				await self.expectHandled(await self.http('POST', `/Scenes/${encodeURIComponent(id)}/${isOn ? 'Off' : 'On'}`), 'Szene umschalten')
 				// Lokalen Status sofort umschalten, damit schnelle Mehrfachklicks
 				// nicht am Abfrage-Intervall hängen; das nächste Polling korrigiert.
 				self.sceneActive[String(id)] = !isOn
@@ -340,7 +340,7 @@ module.exports = function (self) {
 			name: 'Sound Control: Trigger',
 			options: [],
 			callback: async () => {
-				await self.http('POST', '/SoundControl/Trigger')
+				await self.expectHandled(await self.http('POST', '/SoundControl/Trigger'), 'Sound-Trigger')
 			},
 		},
 	})
