@@ -4,6 +4,7 @@ const { tile, overlay, icon } = require('./icons')
 const { sceneChoices } = require('./scenes')
 
 const BLACK = combineRgb(0, 0, 0)
+const LOCAL_VARS = { local: true }
 
 /**
  * Button-Stil mit dem Bild des aktiven Effekts.
@@ -49,6 +50,12 @@ module.exports = UpdateFeedbacks
 module.exports.activeImageStyle = activeImageStyle
 
 function UpdateFeedbacks(self) {
+	// Variablen im Kontext der Taste auflösen, inkl. lokaler Variablen
+	const parse = (context, text) =>
+		context && typeof context.parseVariablesInString === 'function'
+			? context.parseVariablesInString(String(text ?? ''))
+			: self.parseVariablesInString(String(text ?? ''))
+
 	self.setFeedbackDefinitions({
 		scene_active: {
 			name: 'Szene / Sequenz ist aktiv',
@@ -67,8 +74,9 @@ function UpdateFeedbacks(self) {
 					allowCustom: true,
 				},
 			],
-			callback: (feedback) => {
-				return !!self.sceneActive[String(feedback.options.itemId).trim()]
+			callback: async (feedback, context) => {
+				const id = String(await parse(context, feedback.options.itemId)).trim()
+				return !!self.sceneActive[id]
 			},
 		},
 
@@ -93,11 +101,11 @@ function UpdateFeedbacks(self) {
 			options: [
 				{ id: 'effect', type: 'dropdown', label: 'Effekt', default: CATALOG[0].id, choices: CATALOG.map((e) => ({ id: e.id, label: `${e.cat}: ${e.name}` })) },
 				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0' },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 			],
-			callback: (feedback) => {
+			callback: async (feedback, context) => {
 				const o = feedback.options
-				return self.activeFor(o.target, Number(o.id) || 0).id === o.effect
+				return self.activeFor(o.target, Number(await parse(context, o.id)) || 0).id === o.effect
 			},
 		},
 
@@ -107,11 +115,11 @@ function UpdateFeedbacks(self) {
 			type: 'advanced',
 			options: [
 				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0' },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 			],
-			callback: (feedback) => {
+			callback: async (feedback, context) => {
 				const o = feedback.options
-				return activeImageStyle(self.activeFor(o.target, Number(o.id) || 0))
+				return activeImageStyle(self.activeFor(o.target, Number(await parse(context, o.id)) || 0))
 			},
 		},
 
@@ -135,11 +143,11 @@ function UpdateFeedbacks(self) {
 			options: [
 				{ id: 'color', type: 'dropdown', label: 'Farbe', default: COLORS[0].key, choices: COLORS.map((c) => ({ id: c.key, label: c.name })) },
 				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0' },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 			],
-			callback: (feedback) => {
+			callback: async (feedback, context) => {
 				const o = feedback.options
-				return self.activeFor(o.target, Number(o.id) || 0).id === `color:${o.color}`
+				return self.activeFor(o.target, Number(await parse(context, o.id)) || 0).id === `color:${o.color}`
 			},
 		},
 	})

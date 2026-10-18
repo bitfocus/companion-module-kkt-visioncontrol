@@ -67,6 +67,10 @@ Das Modul meldet sich automatisch an, erneuert das Token vor Ablauf und wiederho
 
 Die Presets unter *Laufender Effekt* zeigen Name, Tempo und Helligkeit bereits an.
 
+## Lokale Variablen
+
+Alle Felder für Ziel-ID (GroupID / RDMID) und die Szenenauswahl akzeptieren Variablen, auch **lokale Variablen** der Taste, z. B. `$(local:gruppe)` oder `$(this:…)`. So lässt sich eine Taste einmal bauen und per lokaler Variable auf eine andere Gruppe oder Szene umstellen. Das gilt für Befehle und für die Rückmeldungen „Katalog-Effekt ist aktiv“, „Farbe ist aktiv“, „Bild des aktiven Effekts“ und „Szene / Sequenz ist aktiv“.
+
 ## Hinweise
 
 - **Tempo:** Effekte nehmen *Sekunden pro Farbschritt* und eine *Weichheit in %*. Der Tempo-Wert der App (TimeMultiplier) ist intern ein Zeitfaktor: höher ist langsamer, 0 lässt den Effekt stehen. Das Modul rechnet um und setzt nie 0.

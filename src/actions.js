@@ -5,6 +5,9 @@ const { sceneChoices } = require('./scenes')
 
 const CATALOG_CHOICES = CATALOG.map((e) => ({ id: e.id, label: `${e.cat}: ${e.name}` }))
 
+// Textfelder bieten auch lokale Variablen der Taste an ($(local:…), $(this:…))
+const LOCAL_VARS = { local: true }
+
 // Zeitangaben in verständlichen Einheiten. Hinweis: Der rohe TimeMultiplier der
 // API ist ein Zeitfaktor (höher = langsamer, 0 = steht); src/fx.js rechnet um.
 const TIMING_OPTIONS = (sec, softPct) => [
@@ -82,6 +85,13 @@ const GEOMETRY = [
 ]
 
 module.exports = function (self) {
+	// Variablen im Kontext der Taste auflösen, inkl. lokaler Variablen
+	// ($(local:…), $(this:…)). Ältere Companion-Versionen ohne Kontext: global.
+	const parse = (context, text) =>
+		context && typeof context.parseVariablesInString === 'function'
+			? context.parseVariablesInString(String(text ?? ''))
+			: self.parseVariablesInString(String(text ?? ''))
+
 	// Szenen aus der App als Auswahl; eigene Item-ID oder Variable bleibt möglich
 	const sceneList = sceneChoices(self.scenes)
 	const sceneOption = () => ({
@@ -91,10 +101,10 @@ module.exports = function (self) {
 		default: sceneList[0].id,
 		choices: sceneList,
 		allowCustom: true,
-		tooltip: 'Szenen aus der Vision Control App. Eigene Item-ID oder Variable ist ebenfalls möglich.',
+		tooltip: 'Szenen aus der Vision Control App. Eigene Item-ID oder Variable ist ebenfalls möglich, auch lokal, z. B. $(local:szene).',
 	})
-	const sceneId = async (raw) => {
-		const id = String(await self.parseVariablesInString(String(raw ?? ''))).trim()
+	const sceneId = async (raw, context) => {
+		const id = String(await parse(context, String(raw ?? ''))).trim()
 		if (!id) throw new Error('Keine Szene gewählt')
 		return id
 	}
@@ -103,8 +113,8 @@ module.exports = function (self) {
 		scene_on: {
 			name: 'Szene / Sequenz: An',
 			options: [sceneOption()],
-			callback: async (event) => {
-				const id = await sceneId(event.options.itemId)
+			callback: async (event, context) => {
+				const id = await sceneId(event.options.itemId, context)
 				await self.expectHandled(await self.http('POST', `/Scenes/${encodeURIComponent(id)}/On`), 'Szene An')
 			},
 		},
@@ -112,8 +122,8 @@ module.exports = function (self) {
 		scene_off: {
 			name: 'Szene / Sequenz: Aus',
 			options: [sceneOption()],
-			callback: async (event) => {
-				const id = await sceneId(event.options.itemId)
+			callback: async (event, context) => {
+				const id = await sceneId(event.options.itemId, context)
 				await self.expectHandled(await self.http('POST', `/Scenes/${encodeURIComponent(id)}/Off`), 'Szene Aus')
 			},
 		},
@@ -121,8 +131,8 @@ module.exports = function (self) {
 		scene_toggle: {
 			name: 'Szene / Sequenz: Umschalten',
 			options: [sceneOption()],
-			callback: async (event) => {
-				const id = await sceneId(event.options.itemId)
+			callback: async (event, context) => {
+				const id = await sceneId(event.options.itemId, context)
 				const isOn = !!self.sceneActive[String(id)]
 				await self.expectHandled(await self.http('POST', `/Scenes/${encodeURIComponent(id)}/${isOn ? 'Off' : 'On'}`), 'Szene umschalten')
 				// Lokalen Status sofort umschalten, damit schnelle Mehrfachklicks
@@ -136,15 +146,15 @@ module.exports = function (self) {
 			name: 'Farbe & Dimmer setzen',
 			options: [
 				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: true },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 				{ id: 'useColor', type: 'checkbox', label: 'Farbe setzen', default: true },
 				{ id: 'color', type: 'colorpicker', label: 'Farbe', default: combineRgb(255, 0, 0) },
 				{ id: 'useDimmer', type: 'checkbox', label: 'Dimmer setzen', default: true },
 				{ id: 'dimmer', type: 'number', label: 'Dimmer %', default: 100, min: 0, max: 100 },
 				{ id: 'fade', type: 'number', label: 'Überblendung (0=sofort … 255=max, keine Sekunden)', default: 0, min: 0, max: 255 },
 			],
-			callback: async (event) => {
-				const id = Number(await self.parseVariablesInString(event.options.id))
+			callback: async (event, context) => {
+				const id = Number(await parse(context, event.options.id))
 				const content = {}
 				if (event.options.useDimmer) {
 					content.MasterDimmer = { Default: false, Value: pct16(event.options.dimmer), Fx: null }
@@ -165,12 +175,12 @@ module.exports = function (self) {
 			name: 'Dimmer setzen',
 			options: [
 				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: true },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 				{ id: 'dimmer', type: 'number', label: 'Dimmer %', default: 100, min: 0, max: 100 },
 				{ id: 'fade', type: 'number', label: 'Überblendung (0=sofort … 255=max, keine Sekunden)', default: 10, min: 0, max: 255 },
 			],
-			callback: async (event) => {
-				const id = Number(await self.parseVariablesInString(event.options.id))
+			callback: async (event, context) => {
+				const id = Number(await parse(context, event.options.id))
 				const content = { MasterDimmer: { Default: false, Value: pct16(event.options.dimmer), Fx: null } }
 				await self.setControl(event.options.target, id, content, event.options.fade)
 			},
@@ -180,11 +190,11 @@ module.exports = function (self) {
 			name: 'Blackout (Dimmer 0)',
 			options: [
 				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: true },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 				{ id: 'fade', type: 'number', label: 'Überblendung (0=sofort … 255=max, keine Sekunden)', default: 10, min: 0, max: 255 },
 			],
-			callback: async (event) => {
-				const id = Number(await self.parseVariablesInString(event.options.id))
+			callback: async (event, context) => {
+				const id = Number(await parse(context, event.options.id))
 				await self.setControl(event.options.target, id, { MasterDimmer: { Default: false, Value: 0, Fx: null } }, event.options.fade)
 			},
 		},
@@ -193,15 +203,15 @@ module.exports = function (self) {
 			name: 'Effekt: Farbwechsel (RGB-Fx)',
 			options: [
 				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: true },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 				{ id: 'c1', type: 'colorpicker', label: 'Farbe 1', default: combineRgb(255, 0, 0) },
 				{ id: 'c2', type: 'colorpicker', label: 'Farbe 2', default: combineRgb(0, 255, 0) },
 				{ id: 'c3', type: 'colorpicker', label: 'Farbe 3', default: combineRgb(0, 0, 255) },
 				...TIMING_OPTIONS(1.5, 60),
 			],
-			callback: async (event) => {
+			callback: async (event, context) => {
 				const o = event.options
-				const id = Number(await self.parseVariablesInString(o.id))
+				const id = Number(await parse(context, o.id))
 				const rgb = (c) => {
 					const { r, g, b } = splitRgb(c)
 					return [r, g, b]
@@ -215,7 +225,7 @@ module.exports = function (self) {
 			name: 'Effekt: Muster & Geometrie (Pixel / Matrix)',
 			options: [
 				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: true },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 				{ id: 'effect', type: 'dropdown', label: 'Muster', default: 20, choices: EFFECTS },
 				{ id: 'geometry', type: 'dropdown', label: 'Geometrie', default: 2, choices: GEOMETRY },
 				{ id: 'c1', type: 'colorpicker', label: 'Farbe 1', default: combineRgb(255, 0, 0) },
@@ -234,9 +244,9 @@ module.exports = function (self) {
 				{ id: 'eqLength', type: 'number', label: 'Pulse: Frequenzband Breite (0..255)', default: 6, min: 0, max: 255 },
 				{ id: 'dimmer', type: 'number', label: 'Helligkeit %', default: 100, min: 0, max: 100 },
 			],
-			callback: async (event) => {
+			callback: async (event, context) => {
 				const o = event.options
-				const id = Number(await self.parseVariablesInString(o.id))
+				const id = Number(await parse(context, o.id))
 				const rgb = (c) => {
 					const { r, g, b } = splitRgb(c)
 					return [r, g, b]
@@ -267,7 +277,7 @@ module.exports = function (self) {
 			name: 'Effekt aus Katalog (inkl. Fitnessstudio)',
 			options: [
 				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: true },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 				{ id: 'effect', type: 'dropdown', label: 'Effekt', default: CATALOG[0].id, choices: CATALOG_CHOICES },
 				{ id: 'overrideDimmer', type: 'checkbox', label: 'Helligkeit überschreiben', default: false },
 				{ id: 'dimmer', type: 'number', label: 'Helligkeit %', default: 100, min: 0, max: 100, ...visibleIf('overrideDimmer') },
@@ -283,11 +293,11 @@ module.exports = function (self) {
 				{ id: 'c3', type: 'colorpicker', label: 'Farbe 3', default: combineRgb(0, 255, 0), ...visibleIf('overrideColors') },
 				{ id: 'reverse', type: 'checkbox', label: 'Richtung umkehren', default: false },
 			],
-			callback: async (event) => {
+			callback: async (event, context) => {
 				const o = event.options
 				const base = CATALOG_BY_ID[o.effect]
 				if (!base) throw new Error(`Unbekannter Katalog-Effekt: ${o.effect}`)
-				const id = Number(await self.parseVariablesInString(o.id))
+				const id = Number(await parse(context, o.id))
 				const entry = { ...base }
 				if (o.overrideDimmer) entry.dimmer = o.dimmer
 				if (o.overrideTiming) Object.assign(entry, { sec: Number(o.sec), soft: (Number(o.soft) || 0) / 100 })
@@ -311,7 +321,7 @@ module.exports = function (self) {
 			name: 'Laufenden Effekt anpassen (Tempo, Helligkeit, Range)',
 			options: [
 				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: true },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 				{
 					id: 'what',
 					type: 'dropdown',
@@ -329,9 +339,9 @@ module.exports = function (self) {
 				{ id: 'percent', type: 'number', label: 'Schritt in % (Tempo / Helligkeit)', default: 20, min: 1, max: 100 },
 				{ id: 'rangeStep', type: 'number', label: 'Schritt Range-Punkte', default: 5, min: 1, max: 100 },
 			],
-			callback: async (event) => {
+			callback: async (event, context) => {
 				const o = event.options
-				const id = Number(await self.parseVariablesInString(o.id))
+				const id = Number(await parse(context, o.id))
 				await self.adjustActive(o.target, id, o.what, Number(o.percent) || 20, Number(o.rangeStep) || 5)
 			},
 		},
