@@ -197,7 +197,7 @@ class VisionControlInstance extends InstanceBase {
 
 			this.connected = true
 			this.updateStatus(InstanceStatus.Ok)
-			this.checkFeedbacks('scene_active', 'connected', 'effect_active', 'color_active')
+			this.checkFeedbacks('scene_active', 'connected', 'effect_active', 'color_active', 'active_effect_image')
 			this.updateVariables()
 		} catch (e) {
 			this.connected = false
@@ -250,7 +250,7 @@ class VisionControlInstance extends InstanceBase {
 			this.refreshTimer = null
 			try {
 				await this.readProgrammer()
-				this.checkFeedbacks('effect_active', 'color_active')
+				this.checkFeedbacks('effect_active', 'color_active', 'active_effect_image')
 				this.updateVariables()
 			} catch (e) {
 				this.log('debug', `Aktualisierung fehlgeschlagen: ${e.message || e}`)

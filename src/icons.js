@@ -41,4 +41,9 @@ function tile(id) {
 	return load(`tile_${id}`)
 }
 
-module.exports = { icon, tile }
+/** Durchsichtige Motiv-Ebene für einen Effekttyp (0..20), für Effekte ohne Katalog-Kachel. */
+function overlay(effectType) {
+	return load(`overlay_fx${Number(effectType) || 0}`)
+}
+
+module.exports = { icon, tile, overlay }

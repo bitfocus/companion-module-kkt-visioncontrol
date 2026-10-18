@@ -44,6 +44,7 @@ Das Modul meldet sich automatisch an, erneuert das Token vor Ablauf und wiederho
 
 - **Katalog-Effekt ist aktiv** – die Taste des laufenden Effekts bekommt einen orangen Rahmen (wie die ausgewählte Kachel in der App)
 - **Farbe ist aktiv** – dasselbe für die Farbtasten
+- **Bild des aktiven Effekts** – übernimmt automatisch die Kachel des laufenden Effekts bzw. der laufenden Farbe. Effekte aus der App erscheinen in ihrer Farbe mit dem passenden Motiv, „Aus“ mit dem Mond-Symbol. Genutzt von der Taste *Anzeige: aktiver Effekt*.
 - **Szene / Sequenz ist aktiv**
 - **Mit Vision Control verbunden**
 
@@ -51,7 +52,7 @@ Das Modul meldet sich automatisch an, erneuert das Token vor Ablauf und wiederho
 
 | Variable | Inhalt |
 |----------|--------|
-| `active_effect` | Name des laufenden Effekts, z. B. „Spinning“, „Farbe Rot“, „App / Benutzerdefiniert“ |
+| `active_effect` | Name des laufenden Effekts, z. B. „Spinning“ oder „Farbe Rot“; bei Effekten aus der App der Mustername, z. B. „Ringe“ |
 | `active_effect_id` | Katalog-ID, `custom`, `color:…` oder `off` |
 | `active_category` | Kategorie des Effekts |
 | `active_seconds` | Sekunden pro Farbschritt |

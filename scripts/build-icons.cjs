@@ -15,7 +15,7 @@ const path = require('path')
 const crypto = require('crypto')
 const { execSync } = require('child_process')
 const { Resvg } = require('@resvg/resvg-js')
-const { CATALOG, COLORS, MOTIFS, motifFor } = require('../src/effects-data')
+const { CATALOG, COLORS, MOTIFS, EFFECT_MOTIF, motifFor } = require('../src/effects-data')
 const { labelText } = require('../src/labels')
 
 // Größte Schriftstufe auf Kacheln (der Streifen unten ist niedrig)
@@ -104,6 +104,15 @@ ${frame}
 </svg>`
 }
 
+// Durchsichtige Ebene: nur Motiv und Schriftstreifen, Hintergrundfarbe setzt Companion
+function overlaySvg(motifSvg) {
+	const motif = motifSvg ? nest(motifSvg, 16, 6, 40) : ''
+	return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
+${motif}
+<rect x="0" y="50" width="${SIZE}" height="22" fill="#000" fill-opacity="0.45"/>
+</svg>`
+}
+
 function render(svg, file) {
 	const png = new Resvg(svg, { fitTo: { mode: 'width', value: SIZE }, font: { loadSystemFonts: false } }).render().asPng()
 	fs.writeFileSync(file, png)
@@ -130,6 +139,14 @@ function main() {
 		}
 	}
 	console.log(`${n} Kacheln erzeugt in ${OUT}`)
+
+	// Motiv-Ebenen je Effekttyp für Effekte ohne Katalog-Kachel (z. B. aus der App)
+	let o = 0
+	for (const [type, motifName] of Object.entries(EFFECT_MOTIF)) {
+		render(overlaySvg(motifName ? motifs[motifName] : null), path.join(OUT, `overlay_fx${type}.png`))
+		o++
+	}
+	console.log(`${o} Motiv-Ebenen erzeugt`)
 
 	// Alle PNGs aus ./icons als Base64 in den Quellcode bündeln
 	const bundle = {}

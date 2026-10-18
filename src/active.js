@@ -7,6 +7,12 @@ const { fingerprint, fingerprintOfFx, fxFromReadback, secondsOfFx } = require('.
 
 const CATALOG_BY_FP = new Map(CATALOG.map((e) => [fingerprint(e.effect, e.geometry || 0, e.colors), e.id]))
 
+// Kurze Musternamen je EffectType für Effekte, die nicht aus dem Katalog stammen
+const PATTERN_NAMES = [
+	'Farbfolge', 'Rad', 'Teilung', 'Teilung', 'Wand', 'Wand', 'Wand', 'Wand', 'Pfeil', 'Pfeil', 'Pfeil', 'Pfeil',
+	'Quadrat', 'Ringe', 'Rauschen', 'Schlange', 'Schlange', 'Regen', 'Regen', 'Schach', 'Pixel',
+]
+
 /** Inhalt (Content) einer Gruppe bzw. eines Fixtures aus GET /Control */
 function findContent(programmer, target, id) {
 	if (!programmer) return null
@@ -27,7 +33,8 @@ function fingerprintOfEntry(entry) {
  * @param {{id:string, fp:string}|undefined} lastSent  zuletzt vom Modul gesendet
  */
 function describeActive(content, lastSent) {
-	const out = { id: null, name: 'Nichts aktiv', category: '', seconds: null, dimmerPct: null, range: null }
+	// effect/colors: bei laufendem Fx; rgb: bei statischer Farbe (jeweils 8-bit)
+	const out = { id: null, name: 'Nichts aktiv', category: '', seconds: null, dimmerPct: null, range: null, effect: null, colors: null, rgb: null }
 	if (!content) return out
 	const dim = content.MasterDimmer && typeof content.MasterDimmer.Value === 'number' ? content.MasterDimmer.Value : null
 	if (dim !== null) out.dimmerPct = Math.round((dim / 65535) * 100)
@@ -37,13 +44,17 @@ function describeActive(content, lastSent) {
 		const fp = fingerprintOfFx(rgb.Fx)
 		const id = lastSent && lastSent.fp === fp ? lastSent.id : CATALOG_BY_FP.get(fp)
 		const entry = id ? CATALOG_BY_ID[id] : null
+		const f = fxFromReadback(rgb.Fx)
 		out.id = entry ? entry.id : 'custom'
-		out.name = entry ? entry.name : 'App / Benutzerdefiniert'
+		out.name = entry ? entry.name : PATTERN_NAMES[f.Effect.Value] || 'Effekt'
 		out.category = entry ? entry.cat : 'App'
 		out.seconds = Math.round(secondsOfFx(rgb.Fx) * 100) / 100
-		out.range = fxFromReadback(rgb.Fx).Effect.Range
+		out.range = f.Effect.Range
+		out.effect = f.Effect.Value
+		out.colors = f.FxScenes.map((s) => [s.Value1, s.Value2, s.Value3])
 	} else if (rgb.Value && typeof rgb.Value.Value1 === 'number') {
 		const v = [rgb.Value.Value1, rgb.Value.Value2, rgb.Value.Value3]
+		out.rgb = v.map((x) => Math.round(x / 257))
 		const col = COLORS.find((c) => c.rgb.every((x, i) => Math.abs(x * 257 - v[i]) <= 400))
 		out.id = col ? `color:${col.key}` : 'color'
 		out.name = col ? `Farbe ${col.name}` : 'Farbe'

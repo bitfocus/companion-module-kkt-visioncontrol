@@ -199,7 +199,8 @@ module.exports = function (self) {
 			alignment: 'center:bottom',
 		},
 		steps: [{ down: [], up: [] }],
-		feedbacks: [],
+		// Übernimmt automatisch die Kachel des laufenden Effekts
+		feedbacks: [{ feedbackId: 'active_effect_image', options: { target: 'group', id: GROUP } }],
 	}
 
 	presets['active_tempo'] = {
