@@ -6,6 +6,7 @@ const UpdateVariableDefinitions = require('./variables')
 const UpdatePresets = require('./presets')
 const { findContent, describeActive, adjustContent, fingerprintOfEntry } = require('./active')
 const { sceneName, scenesSignature } = require('./scenes')
+const { deviceStatus, deviceLabel } = require('./devices')
 
 const REQUEST_TIMEOUT_MS = 5000
 const MAX_TRANSIENT_RETRIES = 3
@@ -26,6 +27,9 @@ class VisionControlInstance extends InstanceBase {
 		this.refreshTimer = null
 		this.scenesSig = '' // Vergleichsschlüssel der Szenenliste
 		this.scenesReadError = null
+		this.devices = [] // aktuelle Geräte aus GET /Network/Info
+		this.knownDevices = new Map() // RDMID -> Name, alle seit dem Start gesehenen Geräte
+		this.devicesReadOk = false
 	}
 
 	async init(config) {
@@ -73,6 +77,15 @@ class VisionControlInstance extends InstanceBase {
 			{ type: 'textinput', id: 'password', label: 'Netzwerk-Passwort', width: 6 },
 			{ type: 'number', id: 'poll', label: 'Abfrage-Intervall (ms)', width: 3, default: 2000, min: 500, max: 60000 },
 			{ type: 'textinput', id: 'statusGroup', label: 'Gruppe für Statusanzeige (GroupID)', width: 4, default: '0' },
+			{
+				type: 'number',
+				id: 'expectedDevices',
+				label: 'Anzahl Geräte im Netzwerk (0 = automatisch: höchste bisher gesehene Anzahl)',
+				width: 6,
+				default: 0,
+				min: 0,
+				max: 1000,
+			},
 		]
 	}
 
@@ -213,15 +226,16 @@ class VisionControlInstance extends InstanceBase {
 			}
 
 			await this.readProgrammer()
+			await this.readDevices()
 
 			this.connected = true
 			this.updateStatus(InstanceStatus.Ok)
-			this.checkFeedbacks('scene_active', 'connected', 'effect_active', 'color_active', 'active_effect_image')
+			this.checkFeedbacks('scene_active', 'connected', 'effect_active', 'color_active', 'active_effect_image', 'devices_status')
 			this.updateVariables()
 		} catch (e) {
 			this.connected = false
 			this.updateStatus(InstanceStatus.ConnectionFailure, String(e.message || e))
-			this.checkFeedbacks('connected')
+			this.checkFeedbacks('connected', 'devices_status')
 			this.updateVariables()
 			throw e
 		}
@@ -234,8 +248,12 @@ class VisionControlInstance extends InstanceBase {
 			sceneVars[`scene_${s.ItemId}_name`] = sceneName(s)
 			sceneVars[`scene_${s.ItemId}_active`] = s.Active ? 'true' : 'false'
 		}
+		const dev = this.deviceStatusNow()
 		this.setVariableValues({
 			...sceneVars,
+			devices_online: String(dev.online),
+			devices_total: String(dev.total),
+			devices_missing: dev.missing.length ? dev.missing.join(', ') : '–',
 			connection: this.connected ? 'connected' : 'disconnected',
 			network_name: (this.network && this.network.Name) || '',
 			network_id: (this.network && this.network.Identifier) || '',
@@ -246,6 +264,30 @@ class VisionControlInstance extends InstanceBase {
 			active_seconds: a.seconds === null ? '' : `${a.seconds.toFixed(2).replace('.', ',')} s`,
 			active_dimmer: a.dimmerPct === null ? '' : `${a.dimmerPct} %`,
 			active_range: a.range === null ? '' : String(a.range),
+		})
+	}
+
+	// ---- Geräte-Erreichbarkeit -----------------------------------------------
+
+	async readDevices() {
+		const res = await this.http('GET', '/Network/Info', undefined, true)
+		if (!res.ok) {
+			this.devicesReadOk = false
+			return
+		}
+		const info = await res.json()
+		this.devices = Array.isArray(info.Fixtures) ? info.Fixtures : []
+		for (const f of this.devices) this.knownDevices.set(String(f.RDMID), deviceLabel(f))
+		this.devicesReadOk = true
+	}
+
+	deviceStatusNow() {
+		return deviceStatus({
+			connected: this.connected,
+			readOk: this.devicesReadOk,
+			current: this.devices,
+			known: this.knownDevices,
+			expected: Number(this.config && this.config.expectedDevices) || 0,
 		})
 	}
 

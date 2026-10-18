@@ -12,6 +12,9 @@ module.exports = function (self) {
 		{ variableId: 'active_seconds', name: 'Sekunden pro Farbschritt des aktiven Effekts' },
 		{ variableId: 'active_dimmer', name: 'Helligkeit der Status-Gruppe' },
 		{ variableId: 'active_range', name: 'Range des aktiven Effekts' },
+		{ variableId: 'devices_online', name: 'Geräte online (Anzahl)' },
+		{ variableId: 'devices_total', name: 'Geräte im Netzwerk (Soll-Anzahl)' },
+		{ variableId: 'devices_missing', name: 'Nicht erreichbare Geräte (Namen)' },
 	]
 	// Pro Szene: Name aus der App und Aktiv-Status (folgen Umbenennungen automatisch)
 	for (const s of self.scenes || []) {

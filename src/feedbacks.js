@@ -41,6 +41,10 @@ const TARGETS = [
 ]
 const ORANGE = combineRgb(255, 122, 0)
 const WHITE = combineRgb(255, 255, 255)
+// Ampelfarben für die Geräte-Erreichbarkeit
+const GREEN = combineRgb(0, 153, 51)
+const AMBER = combineRgb(255, 153, 0)
+const RED = combineRgb(204, 0, 0)
 
 module.exports = UpdateFeedbacks
 module.exports.activeImageStyle = activeImageStyle
@@ -109,6 +113,18 @@ function UpdateFeedbacks(self) {
 			callback: (feedback) => {
 				const o = feedback.options
 				return activeImageStyle(self.activeFor(o.target, Number(o.id) || 0))
+			},
+		},
+
+		devices_status: {
+			name: 'Geräte-Erreichbarkeit (grün / orange / rot)',
+			description: 'Grün: alle Geräte online. Orange: einzelne fehlen. Rot: keins erreichbar oder keine Verbindung zur App.',
+			type: 'advanced',
+			options: [],
+			callback: () => {
+				const s = self.deviceStatusNow()
+				const bg = s.level === 'ok' ? GREEN : s.level === 'warn' ? AMBER : RED
+				return { bgcolor: bg, color: s.level === 'warn' ? BLACK : WHITE }
 			},
 		},
 

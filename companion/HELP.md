@@ -17,6 +17,7 @@ Steuert die **Vision Control App** (KKT Künzler Technologies) über ihre lokale
 | Netzwerk-Passwort | Passwort des Vision-Netzwerks |
 | Abfrage-Intervall | Wie oft Szenen, Netzwerk und der laufende Effekt gelesen werden |
 | Gruppe für Statusanzeige | GroupID, deren Effekt in den Variablen erscheint (Standard `0`) |
+| Anzahl Geräte im Netzwerk | Soll-Anzahl für die Online-Anzeige. `0` = automatisch, also die höchste seit dem Start gesehene Anzahl. Feste Zahl empfohlen, falls beim Start schon ein Gerät fehlt. |
 
 Das Modul meldet sich automatisch an, erneuert das Token vor Ablauf und wiederholt Befehle bei einem bekannten, sporadischen Fehler der App automatisch.
 
@@ -46,6 +47,7 @@ Das Modul meldet sich automatisch an, erneuert das Token vor Ablauf und wiederho
 - **Farbe ist aktiv** – dasselbe für die Farbtasten
 - **Bild des aktiven Effekts** – übernimmt automatisch die Kachel des laufenden Effekts bzw. der laufenden Farbe. Effekte aus der App erscheinen in ihrer Farbe mit dem passenden Motiv, „Aus“ mit dem Mond-Symbol. Genutzt von der Taste *Anzeige: aktiver Effekt*.
 - **Szene / Sequenz ist aktiv**
+- **Geräte-Erreichbarkeit** – grün: alle Geräte online, orange: einzelne fehlen, rot: keins erreichbar oder keine Verbindung zur App. Genutzt von der Taste *Geräte online* (Text z. B. „Online 2/2“).
 - **Mit Vision Control verbunden**
 
 ## Variablen
@@ -58,6 +60,9 @@ Das Modul meldet sich automatisch an, erneuert das Token vor Ablauf und wiederho
 | `active_seconds` | Sekunden pro Farbschritt |
 | `active_dimmer` | Helligkeit in % |
 | `active_range` | Range des Effekts |
+| `devices_online`, `devices_total` | Erreichbare Geräte und Soll-Anzahl |
+| `devices_missing` | Namen der nicht erreichbaren Geräte (mit Seriennummer-Ende) |
+| `scene_<ID>_name`, `scene_<ID>_active` | Name und Status jeder Szene aus der App |
 | `connection`, `network_name`, `network_id`, `scene_count` | Verbindung und Netzwerk |
 
 Die Presets unter *Laufender Effekt* zeigen Name, Tempo und Helligkeit bereits an.
