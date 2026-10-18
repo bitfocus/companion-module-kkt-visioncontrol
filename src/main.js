@@ -6,6 +6,7 @@ const UpdateVariableDefinitions = require('./variables')
 const UpdatePresets = require('./presets')
 
 const REQUEST_TIMEOUT_MS = 5000
+const MAX_TRANSIENT_RETRIES = 3
 
 class VisionControlInstance extends InstanceBase {
 	constructor(internal) {
@@ -96,6 +97,9 @@ class VisionControlInstance extends InstanceBase {
 		const res = await this.http('POST', '/Access/Authenticate', { Password: this.config.password ?? '' }, false)
 		if (!res.ok) {
 			this.token = null
+			if (res.status === 503 || res.status === 401) {
+				throw new Error('Falsches oder fehlendes Netzwerk-Passwort')
+			}
 			throw new Error(`Anmeldung fehlgeschlagen (HTTP ${res.status})`)
 		}
 		const data = await res.json()
@@ -117,7 +121,7 @@ class VisionControlInstance extends InstanceBase {
 	 * Low-level HTTP-Request.
 	 * @param {boolean} auth  true = Bearer-Token anhängen und bei 401 einmal neu anmelden
 	 */
-	async http(method, path, body, auth = true, _retried = false) {
+	async http(method, path, body, auth = true, _retried = false, _attempt = 0) {
 		const headers = {}
 		if (body !== undefined) headers['Content-Type'] = 'application/json'
 		if (auth) {
@@ -142,7 +146,23 @@ class VisionControlInstance extends InstanceBase {
 		if (auth && res.status === 401 && !_retried) {
 			this.token = null
 			await this.ensureToken()
-			return this.http(method, path, body, auth, true)
+			return this.http(method, path, body, auth, true, _attempt)
+		}
+
+		// Vision Control hat einen sporadischen Threading-Bug: Der API-Handler
+		// aktualisiert die Oberfläche aus einem Hintergrund-Thread und antwortet
+		// dann mit einer COMException (0x8001010E, RPC_E_WRONG_THREAD).
+		// Steuerbefehle sind idempotent, daher kurz warten und wiederholen.
+		if (!res.ok && _attempt < MAX_TRANSIENT_RETRIES) {
+			const text = await res
+				.clone()
+				.text()
+				.catch(() => '')
+			if (text.includes('COMException') || text.includes('0x8001010E')) {
+				this.log('debug', `Transienter App-Fehler bei ${method} ${path}, Wiederholung ${_attempt + 1}`)
+				await new Promise((r) => setTimeout(r, 150 * (_attempt + 1)))
+				return this.http(method, path, body, auth, _retried, _attempt + 1)
+			}
 		}
 		return res
 	}
@@ -196,8 +216,11 @@ class VisionControlInstance extends InstanceBase {
 	 * @param {number|null} fade FadeTime 0..255 oder null
 	 */
 	async setControl(target, id, content, fade) {
+		// FadeTime ist eine Ganzzahl 0..255 und darf NICHT null sein (die API
+		// antwortet sonst mit HTTP 400). 0 = sofort.
+		const fadeByte = Math.max(0, Math.min(255, Math.round(Number(fade) || 0)))
 		const body = {
-			FadeTime: fade === undefined || fade === null || fade === 0 ? null : Number(fade),
+			FadeTime: fadeByte,
 			Fixtures: [],
 			Groups: [],
 		}

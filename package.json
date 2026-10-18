@@ -5,7 +5,8 @@
 	"type": "commonjs",
 	"scripts": {
 		"format": "prettier -w .",
-		"package": "companion-module-build"
+		"package": "companion-module-build",
+		"icons": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/import-icons.ps1 && node scripts/build-icons.cjs"
 	},
 	"license": "MIT",
 	"repository": {
@@ -13,14 +14,15 @@
 		"url": "git+https://github.com/vt-koenig/companion-module-visioncontrol.git"
 	},
 	"dependencies": {
-		"@companion-module/base": "~2.1.3"
+		"@companion-module/base": "~1.12.0"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^3.1.1",
+		"@companion-module/tools": "^2.3.0",
+		"@resvg/resvg-js": "^2.6.2",
 		"prettier": "^3.9.9"
 	},
 	"engines": {
-		"node": "^26"
+		"node": "^18.12 || ^20 || ^22 || ^26"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
 	"packageManager": "yarn@4.18.1"
