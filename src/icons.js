@@ -1,8 +1,8 @@
 const fs = require('fs')
 const path = require('path')
 
-// Grafiken für die Presets: Symbole (scripts/import-icons.ps1) und Kacheln im
-// App-Stil (scripts/build-icons.cjs). Bevorzugt aus src/icons.generated.json,
+// Grafiken für die Presets aus dem Icon Pack (scripts/build-icons.cjs):
+// Steuer-Symbole, Effekt- und Farbkacheln, Motiv-Ebenen. Bevorzugt aus src/icons.generated.json,
 // damit sie im gebauten Companion-Paket enthalten sind; sonst aus ./icons.
 let BUNDLE = {}
 try {
@@ -36,7 +36,7 @@ function icon(key, variant = 'light') {
 	return load(`${key}-${variant}`)
 }
 
-/** 72×72-Kachel im App-Stil (Farbverlauf + Motiv) oder undefined. */
+/** 72×72-Kachel (Farbverlauf + Glyphe des Effektmusters) oder undefined. */
 function tile(id) {
 	return load(`tile_${id}`)
 }

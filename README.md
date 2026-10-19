@@ -30,27 +30,39 @@ setzen (den Ordner, der `companion-module-visioncontrol` enthält), dann
 Companion starten. Companion bringt seine eigene Node-Laufzeit mit; es genügt,
 dass `node_modules` im Modulordner vorhanden ist.
 
-### Symbole aus der Vision Control App
+### Icon Pack
 
-Die Presets zeigen die Grafiken der Vision Control App: Effekt-Kacheln im
-App-Stil (Farbverlauf der Effektfarben plus Motiv wie Ziegelwand, Rad, Ringe,
-Sterne) und Symbole für die Steuertasten. Sie liegen in `icons/` und gebündelt
-in `src/icons.generated.json`, damit sie auch im gebauten Paket enthalten sind.
+Alle Grafiken der Presets kommen aus einem eigenen Icon Pack mit einer
+gemeinsamen visuellen Sprache: Steuer-Symbole (Blackout, Full On, Dimmer,
+Szene, Sequenz, Tempo, Range, Status …), Effekt-Kacheln und Farb-Kacheln.
+Jede Preset-Taste trägt ein Symbol aus dem Pack.
 
-Nach einem Update der App lassen sie sich neu erzeugen:
+![Alle Preset-Tasten mit dem Icon Pack](docs/iconpack-preview.png)
+
+Regeln, die für jede Glyphe gelten:
+
+- Raster 24 × 24, Motiv im Feld 2..22
+- Linie 2 Einheiten, runde Enden und Ecken
+- Flächen nur einfarbig in derselben Tinte, keine Verläufe in der Glyphe
+- eine Tinte: weiß auf dunklen, fast schwarz auf hellen Flächen
+- Glyphe immer 32 × 32 px, auf der Taste wie auf der Kachel (gleiche Strichstärke)
+
+Kacheln (72 × 72): Verlauf der Effektfarben, Glyphe des Effektmusters mittig,
+Schriftstreifen unten (45 % schwarz), Radius 12. Aktiv-Zustand: orangener
+Rahmen 3,5 px (`#FF7A00`). Farbfolgen ohne Muster zeigen das Kreislauf-Symbol,
+einfarbige Farb-Kacheln den Tropfen.
+
+Die Glyphen stehen in `scripts/iconpack/glyphs.cjs`, das Layout in
+`scripts/build-icons.cjs`. Neu erzeugen (Windows, macOS, Linux, ohne
+installierte App):
 
 ```bash
 npm run icons
 ```
 
-Das führt `scripts/import-icons.ps1` (Symbole) und `scripts/build-icons.cjs`
-(Kacheln aus den in der App eingebetteten SVG-Motiven) aus.
-
-Das Polizei-Motiv stammt laut seinen SVG-Metadaten aus dem EmojiOne-Set
-(CC BY 4.0).
-
-Nach einem Update der App das Skript erneut ausführen. Ohne Symbole laufen die
-Presets trotzdem, dann nur mit Text.
+Das schreibt `icons/*.png` und bündelt sie in `src/icons.generated.json`.
+Mit `node scripts/build-icons.cjs --svg <ordner>` entstehen die SVG-Quellen,
+etwa für Grafik-Programme oder die Dokumentation.
 
 Ein verteilbares Paket bauen (optional, benötigt die Build-Tools):
 

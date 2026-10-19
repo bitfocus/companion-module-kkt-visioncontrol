@@ -6,7 +6,7 @@
 	"scripts": {
 		"format": "prettier -w .",
 		"package": "companion-module-build",
-		"icons": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/import-icons.ps1 && node scripts/build-icons.cjs"
+		"icons": "node scripts/build-icons.cjs"
 	},
 	"license": "MIT",
 	"repository": {

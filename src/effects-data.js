@@ -12,8 +12,9 @@
 // geometry: 0 Gerät, 1 Einzeln (Geräte-Pixel), 2 Pixel / Matrix
 // trigger:  start/jump 0 NONE, 1 TAP, 2 BEAT, 3 PULSE
 
-// Motive aus der Vision Control App (Fingerabdruck des eingebetteten SVG,
-// Position als Rückfall). Stand: App 2.17.3.
+// Motiv-Namen der Effekt-Kacheln. Gezeichnet werden sie im Icon Pack
+// (scripts/iconpack/glyphs.cjs, Tabelle MOTIF). Die Werte sind die
+// Fingerabdrücke der ursprünglichen App-Motive und werden nicht mehr benötigt.
 const MOTIFS = {
 	arrow135: ['0a25ecbd7d73', 5],
 	arrow45: ['2d3161c929bf', 6],
