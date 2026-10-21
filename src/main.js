@@ -109,16 +109,29 @@ class VisionControlInstance extends InstanceBase {
 			return
 		}
 		this.updateStatus(InstanceStatus.Connecting)
+		this.token = null
+		// Die Abfrage läuft immer, auch wenn die App beim Start nicht erreichbar ist
+		// (z. B. nach einem App-Update mit noch abgeschalteter API). Sonst bliebe das
+		// Modul "offline", obwohl Befehle längst wieder funktionieren.
+		const interval = Math.max(500, Number(this.config.poll) || 2000)
+		this.pollTimer = setInterval(() => this.pollSafe(), interval)
+		await this.pollSafe()
+	}
+
+	/** Eine Abfrage ohne Überlappung; Fehler nur beim Wechsel des Fehlertexts loggen */
+	async pollSafe() {
+		if (this.polling) return
+		this.polling = true
 		try {
-			await this.authenticate()
 			await this.poll()
-			const interval = Math.max(500, Number(this.config.poll) || 2000)
-			this.pollTimer = setInterval(() => {
-				this.poll().catch(() => {})
-			}, interval)
+			if (this.lastPollError) this.log('info', 'Verbindung zur App wiederhergestellt')
+			this.lastPollError = null
 		} catch (e) {
-			this.updateStatus(InstanceStatus.ConnectionFailure, String(e.message || e))
-			this.log('error', `Verbindung fehlgeschlagen: ${e.message || e}`)
+			const msg = String(e.message || e)
+			if (msg !== this.lastPollError) this.log('error', `Verbindung fehlgeschlagen: ${msg}`)
+			this.lastPollError = msg
+		} finally {
+			this.polling = false
 		}
 	}
 
