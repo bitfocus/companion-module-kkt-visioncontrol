@@ -44,12 +44,28 @@ Das Modul meldet sich automatisch an, erneuert das Token vor Ablauf und wiederho
 
 ## Stream Deck + (Drehregler)
 
-Unter *Drehregler (Stream Deck +)* liegen zwei Presets für die Drehregler:
+Companion bildet das Stream Deck + so auf die Seite ab (Seitenversatz 0):
 
-- **Helligkeit** – rechts drehen = heller, links = dunkler (5 % je Raste), drücken = Blackout an/aus
+| Reihe | Bedienelement |
+|-------|---------------|
+| 1 und 2 | die 8 Tasten |
+| 3 | das Touch-Display, je Viertel eine Taste (Tippen = Drücken, senkrecht Wischen = Drehen) |
+| 4 | die 4 Drehregler (Drehen und Drücken), ohne eigene Anzeige |
+
+Unter *Drehregler (Stream Deck +)* liegen die passenden Presets:
+
+- **Helligkeit** – für Reihe 4: rechts drehen = heller, links = dunkler (5 % je Raste), drücken = Blackout an/aus
 - **Helligkeit fein** – dasselbe mit 1 % je Raste
+- **Helligkeit: Display über dem Regler** – für Reihe 3, direkt über dem Regler: zeigt Dimmer-Symbol, orangen Balken und Wert in %; tippen = Blackout an/aus, senkrecht wischen = heller/dunkler
 
-Das Display über dem Regler zeigt das Dimmer-Symbol, einen orangen Balken und den Wert in %. Das Preset auf einen Drehregler ziehen; Schrittweite und Gruppe lassen sich in den Aktionen ändern. Für eigene Tasten im Button-Editor „Drehaktionen aktivieren“ einschalten und die Aktion *Helligkeit schrittweise* unter „Links drehen“ / „Rechts drehen“ eintragen.
+Einrichten:
+
+1. In Companion die Seite öffnen, auf der das Stream Deck + liegt (unter *Surfaces* steht, welche Seite es zeigt).
+2. *Presets* → *Vision Control* → *Drehregler (Stream Deck +)*.
+3. **Helligkeit** auf den Platz in **Reihe 4** ziehen, unter dem gewünschten Regler.
+4. **Helligkeit: Display über dem Regler** auf den Platz **direkt darüber in Reihe 3** ziehen.
+
+Schrittweite und Gruppe lassen sich in den Aktionen der Taste ändern. Für eigene Tasten im Button-Editor „Drehaktionen aktivieren“ (Enable rotary actions) einschalten und die Aktion *Helligkeit schrittweise* unter „Links drehen“ / „Rechts drehen“ eintragen.
 
 ## Feedbacks
 

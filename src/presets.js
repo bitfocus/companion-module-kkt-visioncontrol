@@ -263,6 +263,14 @@ module.exports = function (self) {
 		],
 	}
 
+	// Companion legt beim Stream Deck + die Drehregler in Reihe 4, das Touch-Display
+	// zeigt Reihe 3. Diese Taste gehört über den Regler: Sie zeigt Wert und Balken,
+	// Tippen = Blackout an/aus, senkrecht Wischen = heller/dunkler.
+	presets['encoder_dimmer_display'] = {
+		...presets['encoder_dimmer'],
+		name: 'Helligkeit: Display über dem Regler (tippen = Blackout, wischen = heller/dunkler)',
+	}
+
 	// ---- Szenen: automatisch aus der App ----------------------------------------
 	// Der Tastentext ist die Namens-Variable der Szene, damit Umbenennungen in
 	// der App auch bereits platzierte Tasten erreichen.
