@@ -1,4 +1,4 @@
-// Rückfall für Szenennamen: In Vision Control 2.17.3 antwortet GET /Scenes mit
+// Rückfall für Szenennamen: In Vision Control 2.17.3 und 2.18.4 antwortet GET /Scenes mit
 // HTTP 500 (auch wenn Szenen existieren). Läuft Companion auf demselben PC wie
 // die App, lesen wir Namen und IDs aus den lokalen Szenendateien der App.
 // Gelesen werden nur die Szenendateien, keine Netzwerk-/Passwortdaten.

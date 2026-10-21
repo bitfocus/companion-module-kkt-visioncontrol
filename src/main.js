@@ -223,7 +223,7 @@ class VisionControlInstance extends InstanceBase {
 				scenes = Array.isArray(data) ? data : []
 				this.scenesReadError = null
 			} else {
-				// Vision Control 2.17.3: GET /Scenes antwortet mit HTTP 500, auch wenn
+				// Vision Control 2.17.3 und 2.18.4: GET /Scenes antwortet mit HTTP 500, auch wenn
 				// Szenen existieren. Rückfall: Namen aus den lokalen Szenendateien der App.
 				const useLocal = this.config.localScenes !== false
 				if (useLocal) scenes = readLocalScenes()
