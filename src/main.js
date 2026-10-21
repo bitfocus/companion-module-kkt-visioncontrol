@@ -30,6 +30,7 @@ class VisionControlInstance extends InstanceBase {
 		this.programmer = null // letzter Stand aus GET /Control
 		this.lastSent = {} // 'group:0' -> { id, fp } zuletzt vom Modul gesendeter Katalog-Effekt
 		this.refreshTimer = null
+		this.fastTimer = null // schnelle Abfrage nur des laufenden Zustands (GET /Control)
 		this.scenesSig = '' // Vergleichsschlüssel der Szenenliste
 		this.scenesReadError = null
 		this.devices = [] // Geräte des Netzwerks aus GET /Network/Info (auch ausgeschaltete)
@@ -54,6 +55,10 @@ class VisionControlInstance extends InstanceBase {
 		if (this.pollTimer) {
 			clearInterval(this.pollTimer)
 			this.pollTimer = null
+		}
+		if (this.fastTimer) {
+			clearInterval(this.fastTimer)
+			this.fastTimer = null
 		}
 		if (this.refreshTimer) {
 			clearTimeout(this.refreshTimer)
@@ -83,6 +88,16 @@ class VisionControlInstance extends InstanceBase {
 			{ type: 'textinput', id: 'port', label: 'Port', width: 3, default: '5123', regex: Regex.PORT },
 			{ type: 'textinput', id: 'password', label: 'Netzwerk-Passwort', width: 6 },
 			{ type: 'number', id: 'poll', label: 'Abfrage-Intervall (ms)', width: 3, default: 2000, min: 500, max: 60000 },
+			{
+				type: 'number',
+				id: 'fastPoll',
+				label: 'Abfrage Helligkeit / laufender Effekt (ms, 0 = aus)',
+				tooltip: 'Liest nur den laufenden Zustand (GET /Control), damit Anzeigen Änderungen aus der App schnell übernehmen.',
+				width: 4,
+				default: 500,
+				min: 0,
+				max: 10000,
+			},
 			{ type: 'textinput', id: 'statusGroup', label: 'Gruppe für Statusanzeige (GroupID)', width: 4, default: '0' },
 			{
 				type: 'checkbox',
@@ -105,6 +120,10 @@ class VisionControlInstance extends InstanceBase {
 			clearInterval(this.pollTimer)
 			this.pollTimer = null
 		}
+		if (this.fastTimer) {
+			clearInterval(this.fastTimer)
+			this.fastTimer = null
+		}
 		if (!this.config.host) {
 			this.updateStatus(InstanceStatus.BadConfig, 'Keine IP-Adresse gesetzt')
 			return
@@ -116,7 +135,26 @@ class VisionControlInstance extends InstanceBase {
 		// Modul "offline", obwohl Befehle längst wieder funktionieren.
 		const interval = Math.max(500, Number(this.config.poll) || 2000)
 		this.pollTimer = setInterval(() => this.pollSafe(), interval)
+		// Helligkeit und laufender Effekt ändern sich oft (auch in der App) – diese
+		// kleine Abfrage läuft schneller als die große mit Szenen und Geräten.
+		const fast = Number(this.config.fastPoll ?? 500)
+		if (fast > 0) this.fastTimer = setInterval(() => this.refreshProgrammer(), Math.max(200, fast))
 		await this.pollSafe()
+	}
+
+	/** Nur den laufenden Zustand lesen und Anzeigen aktualisieren, ohne Überlappung */
+	async refreshProgrammer() {
+		if (!this.connected || this.polling || this.programmerBusy) return
+		this.programmerBusy = true
+		try {
+			await this.readProgrammer()
+			this.checkFeedbacks('effect_active', 'color_active', 'active_effect_image', 'dimmer_level')
+			this.updateVariables()
+		} catch (e) {
+			this.log('debug', `Schnelle Abfrage fehlgeschlagen: ${e.message || e}`)
+		} finally {
+			this.programmerBusy = false
+		}
 	}
 
 	/** Eine Abfrage ohne Überlappung; Fehler nur beim Wechsel des Fehlertexts loggen */
@@ -406,13 +444,19 @@ class VisionControlInstance extends InstanceBase {
 	 * Setzt die Helligkeit. Schnelle Drehregler-Schritte werden zusammengefasst:
 	 * Läuft schon ein Befehl, wird danach nur der neueste Wert gesendet.
 	 */
-	async setDimmerQueued(target, id, value, fade) {
-		const key = `${target}:${id}`
+	/** Neue Helligkeit sofort anzeigen, bevor die App sie bestätigt */
+	noteDimmer(target, id, value) {
 		const v = Math.max(0, Math.min(DIM_FULL, Math.round(value)))
-		this.dimPending[key] = { value: v, at: Date.now() }
+		this.dimPending[`${target}:${id}`] = { value: v, at: Date.now() }
 		this.applyPendingDimmer()
 		this.updateVariables()
 		this.checkFeedbacks('active_effect_image', 'effect_active', 'color_active', 'dimmer_level')
+		return v
+	}
+
+	async setDimmerQueued(target, id, value, fade) {
+		const key = `${target}:${id}`
+		this.noteDimmer(target, id, value)
 		if (this.dimSending[key]) return
 		this.dimSending[key] = true
 		try {
@@ -467,6 +511,8 @@ class VisionControlInstance extends InstanceBase {
 		}
 		const res = await this.http('POST', '/Control', body)
 		await this.expectHandled(res, 'Steuerbefehl')
+		// Gleich zurücklesen, damit Anzeigen nicht auf die nächste Abfrage warten
+		this.scheduleRefresh(150)
 	}
 
 	// ---- Definitionen laden ---------------------------------------------------

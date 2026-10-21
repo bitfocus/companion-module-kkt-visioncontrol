@@ -167,6 +167,7 @@ module.exports = function (self) {
 						Fx: null,
 					}
 				}
+				if (content.MasterDimmer) self.noteDimmer(event.options.target, id, content.MasterDimmer.Value)
 				await self.setControl(event.options.target, id, content, event.options.fade)
 			},
 		},
@@ -182,6 +183,7 @@ module.exports = function (self) {
 			callback: async (event, context) => {
 				const id = Number(await parse(context, event.options.id))
 				const content = { MasterDimmer: { Default: false, Value: pct16(event.options.dimmer), Fx: null } }
+				self.noteDimmer(event.options.target, id, content.MasterDimmer.Value)
 				await self.setControl(event.options.target, id, content, event.options.fade)
 			},
 		},
@@ -195,6 +197,7 @@ module.exports = function (self) {
 			],
 			callback: async (event, context) => {
 				const id = Number(await parse(context, event.options.id))
+				self.noteDimmer(event.options.target, id, 0)
 				await self.setControl(event.options.target, id, { MasterDimmer: { Default: false, Value: 0, Fx: null } }, event.options.fade)
 			},
 		},
