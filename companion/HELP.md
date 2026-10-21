@@ -92,6 +92,7 @@ Schrittweite und Gruppe lassen sich in den Aktionen der Taste ändern. Für eige
 | `network_device_names` | Namen der Netzwerk-Geräte mit Seriennummer-Ende |
 | `app_reachable` | `ja` / `nein` – antwortet die App |
 | `scene_<ID>_name`, `scene_<ID>_active` | Name und Status jeder Szene aus der App |
+| `scene_<ID>_label` | Szenenname für Tasten, passend umbrochen (Größe 14) |
 | `connection`, `network_name`, `network_id`, `scene_count` | Verbindung und Netzwerk |
 
 Die Presets unter *Laufender Effekt* zeigen Name, Tempo und Helligkeit bereits an.
@@ -108,5 +109,6 @@ Alle Felder für Ziel-ID (GroupID / RDMID) und die Szenenauswahl akzeptieren Var
 - **Beat und Pulse** brauchen eine Audioquelle in der App (Mikrofon oder Line-In unter Sound).
 - **App-Editor:** Wird ein vom Modul gesetzter Effekt in der App unter „Benutzerdefinierte Color FX“ geöffnet, überschreibt die App ihn mit eigenen Werten (z. B. Tempo 0) und er steht still. Dann den Effekt erneut aus Companion starten.
 - **API:** Enum-Werte werden im Request als Ganzzahl gesendet, die App liefert sie als Namen zurück.
-- **Szenen (App-Versionen 2.17.3 und 2.18.4):** Die Szenen-Befehle der API funktionieren in diesen Versionen nicht (getestet am 21.10.2026). `GET /Scenes` antwortet mit HTTP 500, `POST /Scenes/{id}/On|Off` wird nicht verarbeitet, `POST /SoundControl/Trigger` meldet HTTP 400. Das Modul zeigt in diesen Fällen eine klare Fehlermeldung im Log. Die Szenennamen liest es ersatzweise aus den lokalen Szenendateien der App, wenn Companion auf demselben PC läuft (abschaltbar in der Konfiguration). Sobald Vision Control die API korrigiert, arbeiten die Szenen-Tasten ohne Änderung.
+- **Szenen (App-Versionen 2.17.3 und 2.18.4):** Die Szenen-Befehle der API funktionieren in diesen Versionen nicht (getestet am 21.10.2026). `GET /Scenes` antwortet mit HTTP 500, `POST /Scenes/{id}/On|Off` wird nicht verarbeitet, `POST /SoundControl/Trigger` meldet HTTP 400. Das Modul zeigt in diesen Fällen eine klare Fehlermeldung im Log. Die Szenennamen liest es ersatzweise aus den lokalen Szenendateien der App, wenn Companion auf demselben PC läuft (abschaltbar in der Konfiguration). Dafür fordert das Modul in Companion 5 Dateizugriff an (`permissions.filesystem` im Manifest); ohne diese Freigabe sperrt Companion das Lesen außerhalb des Modulordners. Gelesen werden nur die beiden Szenendateien. Sobald Vision Control die API korrigiert, arbeiten die Szenen-Tasten ohne Änderung.
 - **Online-Status der Geräte:** Die REST-API meldet nicht, ob ein Gerät eingeschaltet ist. `GET /Network/Info` listet auch ausgeschaltete Geräte (per Test bestätigt). Eine Anzeige „Online x/y“ ist erst möglich, wenn Vision Control den Status in der API ergänzt.
+- **Darstellung in Companion 5:** Die Presets setzen „Topbar anzeigen“ aus. Sonst vergrößert Companion 5 den Text um etwa ein Viertel und bricht Wörter mitten im Wort um. Symbole liegen als ganze 72er-Fläche vor, weil Companion 5 Bilder auf die ganze Taste skaliert. Bereits platzierte Tasten behalten ihren alten Stil – dafür die Presets neu auf die Tasten ziehen.

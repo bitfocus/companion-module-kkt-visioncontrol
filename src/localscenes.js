@@ -4,22 +4,39 @@
 // Gelesen werden nur die Szenendateien, keine Netzwerk-/Passwortdaten.
 
 const fs = require('fs')
+const os = require('os')
 const path = require('path')
 
 const FILES = ['IQIQCreativeScenes.json', 'IQIQCreativeScenesNetwork.json']
 
-function findLocalStateDirs() {
-	const base = process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Packages') : null
-	if (!base || !fs.existsSync(base)) return []
+// Companion startet Module mit reduzierter Umgebung, LOCALAPPDATA fehlt dort.
+// Daher zusätzlich über das Benutzerprofil suchen (os.homedir() fragt Windows direkt).
+function packageBases() {
+	const roots = [process.env.LOCALAPPDATA]
 	try {
-		return fs
-			.readdirSync(base)
-			.filter((d) => /^KnzlerTechnologies\.VisionControl_/i.test(d))
-			.map((d) => path.join(base, d, 'LocalState'))
-			.filter((d) => fs.existsSync(d))
+		roots.push(path.join(os.homedir(), 'AppData', 'Local'))
 	} catch {
-		return []
+		// kein Benutzerprofil ermittelbar
 	}
+	if (process.env.USERPROFILE) roots.push(path.join(process.env.USERPROFILE, 'AppData', 'Local'))
+	return [...new Set(roots.filter(Boolean).map((r) => path.join(r, 'Packages')))]
+}
+
+function findLocalStateDirs() {
+	for (const base of packageBases()) {
+		if (!fs.existsSync(base)) continue
+		try {
+			const dirs = fs
+				.readdirSync(base)
+				.filter((d) => /^KnzlerTechnologies\.VisionControl_/i.test(d))
+				.map((d) => path.join(base, d, 'LocalState'))
+				.filter((d) => fs.existsSync(d))
+			if (dirs.length) return dirs
+		} catch {
+			// nächster Kandidat
+		}
+	}
+	return []
 }
 
 /**

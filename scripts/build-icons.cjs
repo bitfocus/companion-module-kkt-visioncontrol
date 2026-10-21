@@ -9,7 +9,8 @@
  *   node scripts/build-icons.cjs --bundle     nur ./icons/*.png bündeln
  *
  * Ergebnis:
- *   icons/<name>-light.png / -dark.png   Steuer-Symbole 32 × 32 (weiß / fast schwarz)
+ *   icons/<name>-light.png / -dark.png   Steuer-Symbole als ganze Taste 72 × 72: Symbol
+ *                                        28 px oben, darunter frei für den Text (weiß / fast schwarz)
  *   icons/tile_<id>.png / _active.png    Effekt- und Farbkacheln 72 × 72
  *   icons/overlay_fx<n>.png              durchsichtige Motiv-Ebenen 72 × 72
  *   src/icons.generated.json             alles als Base64 gebündelt
@@ -33,6 +34,11 @@ const INK_DARK = '#111111'
 const ACTIVE = '#FF7A00' // Rahmen "aktiv" (Veranstaltungstechnik König Orange)
 const BAND_ALPHA = 0.45 // Schriftstreifen unten
 const TILE_MAX_FONT = 18 // wie src/presets.js
+const TILE_TEXT_HEIGHT = 34 // Platz für den Text auf der Kachel, wie src/presets.js
+// Steuer-Symbol auf der Taste. Companion 5 skaliert Bilder auf die ganze Taste
+// ("fit"), daher liegt das Symbol bereits an seiner Stelle in einer 72er-Fläche.
+const BUTTON_GLYPH = 28
+const BUTTON_GLYPH_Y = 5
 
 const hex = ([r, g, b]) => '#' + [r, g, b].map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('')
 const mix = ([r, g, b], f) => [r, g, b].map((v) => Math.round(f >= 0 ? v + (255 - v) * f : v * (1 + f)))
@@ -56,10 +62,11 @@ function svgDoc(size, body) {
 	return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${body}</svg>`
 }
 
-// Steuer-Symbol 32 × 32, durchsichtig
+// Steuer-Symbol als ganze Taste 72 × 72, durchsichtig, Symbol oben mittig
 function controlSvg(key, ink) {
-	const s = GLYPH / 24
-	return svgDoc(GLYPH, `<g transform="scale(${s})">${CONTROL[key](ink)}</g>`)
+	const s = BUTTON_GLYPH / 24
+	const x = (TILE - BUTTON_GLYPH) / 2
+	return svgDoc(TILE, `<g transform="translate(${x} ${BUTTON_GLYPH_Y}) scale(${s})">${CONTROL[key](ink)}</g>`)
 }
 
 // Kachel: Effektfarben als Verlauf, Glyphe mittig im oberen Feld, Schriftstreifen unten
@@ -95,12 +102,12 @@ function buildAll() {
 	}
 	for (const e of CATALOG) {
 		const motif = motifFor(e) || 'cycle'
-		const lines = labelText(e.name, TILE_MAX_FONT).lineCount
+		const lines = labelText(e.name, TILE_MAX_FONT, TILE_TEXT_HEIGHT).lineCount
 		out[`tile_${e.id}`] = tileSvg(e.colors, motif, { lines })
 		out[`tile_${e.id}_active`] = tileSvg(e.colors, motif, { lines, active: true })
 	}
 	for (const c of COLORS) {
-		const lines = labelText(c.name, TILE_MAX_FONT).lineCount
+		const lines = labelText(c.name, TILE_MAX_FONT, TILE_TEXT_HEIGHT).lineCount
 		out[`tile_color_${c.key}`] = tileSvg([c.rgb], 'drop', { lines })
 		out[`tile_color_${c.key}_active`] = tileSvg([c.rgb], 'drop', { lines, active: true })
 	}
@@ -136,7 +143,7 @@ function main() {
 	fs.mkdirSync(OUT, { recursive: true })
 	for (const f of fs.readdirSync(OUT)) if (f.endsWith('.png')) fs.unlinkSync(path.join(OUT, f))
 	for (const [name, svg] of Object.entries(all)) {
-		const size = name.endsWith('-light') || name.endsWith('-dark') ? GLYPH : TILE
+		const size = TILE
 		const png = new Resvg(svg, { fitTo: { mode: 'width', value: size }, font: { loadSystemFonts: false } }).render().asPng()
 		fs.writeFileSync(path.join(OUT, `${name}.png`), png)
 	}

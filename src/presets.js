@@ -11,6 +11,9 @@ const ORANGE = combineRgb(255, 122, 0)
 // Größte Schriftstufe: Kacheln haben unten nur einen schmalen Streifen
 const TILE_MAX_FONT = 18
 const GLYPH_MAX_FONT = 24
+// Platz für den Text in px: unter dem Symbol (oben 28 px ab y 5) bzw. auf dem Kachelstreifen
+const GLYPH_TEXT_HEIGHT = 36
+const TILE_TEXT_HEIGHT = 34
 
 function textOn(r, g, b) {
 	const luminance = 0.299 * r + 0.587 * g + 0.114 * b
@@ -21,7 +24,7 @@ function textOn(r, g, b) {
 function look(text, bgRgb, iconKey) {
 	const [r, g, b] = bgRgb
 	const color = textOn(r, g, b)
-	const lbl = labelText(text, GLYPH_MAX_FONT)
+	const lbl = labelText(text, GLYPH_MAX_FONT, GLYPH_TEXT_HEIGHT)
 	const style = { text: lbl.text, size: lbl.size, color, bgcolor: combineRgb(r, g, b) }
 	const png = iconKey ? icon(iconKey, color === BLACK ? 'dark' : 'light') : undefined
 	if (png) {
@@ -36,7 +39,7 @@ function look(text, bgRgb, iconKey) {
 function tileLook(text, tileId, fallbackRgb) {
 	const png = tile(tileId)
 	if (!png) return look(text, fallbackRgb, null)
-	const lbl = labelText(text, TILE_MAX_FONT)
+	const lbl = labelText(text, TILE_MAX_FONT, TILE_TEXT_HEIGHT)
 	return { text: lbl.text, size: lbl.size, color: WHITE, bgcolor: BLACK, png64: png, pngalignment: 'center:center', alignment: 'center:bottom' }
 }
 
@@ -232,9 +235,9 @@ module.exports = function (self) {
 		options: { rotaryActions: true },
 		style: {
 			text: `$(${label}:active_dimmer)`,
-			size: '18',
+			size: '14',
 			color: WHITE,
-			bgcolor: combineRgb(40, 40, 40),
+			bgcolor: BLACK, // schwarz wie der Rest des Touch-Displays
 			png64: icon('dimmer', 'light'),
 			pngalignment: 'center:top',
 			alignment: 'center:bottom',
@@ -284,7 +287,10 @@ module.exports = function (self) {
 		const folder = sceneFolder(s)
 		const seq = isSequence(s)
 		const style = look(name, [30, 30, 30], seq ? 'sequence' : 'scene')
-		style.text = `$(${label}:scene_${id}_name)`
+		// Umbrochene Namens-Variable in fester Größe 14, damit auch spätere
+		// Umbenennungen in der App sauber auf die Taste passen
+		style.text = `$(${label}:scene_${id}_label)`
+		style.size = '14'
 		presets[`scene_${id}`] = {
 			type: 'button',
 			category: folder ? `Szenen: ${folder}` : 'Szenen',
@@ -355,5 +361,10 @@ module.exports = function (self) {
 		feedbacks: [{ feedbackId: 'connected', options: {}, style: { bgcolor: combineRgb(0, 102, 204), color: WHITE } }],
 	}
 
+	// Ohne ausdrückliche Angabe rechnet Companion 5 mit Topbar und vergrößert den
+	// Text um den Faktor 2,1 statt 1/0,6; dann brechen Wörter mitten im Wort um.
+	for (const p of Object.values(presets)) {
+		if (p && p.style && p.style.show_topbar === undefined) p.style.show_topbar = false
+	}
 	self.setPresetDefinitions(presets)
 }

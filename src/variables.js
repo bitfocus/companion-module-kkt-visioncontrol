@@ -19,6 +19,7 @@ module.exports = function (self) {
 	// Pro Szene: Name aus der App und Aktiv-Status (folgen Umbenennungen automatisch)
 	for (const s of self.scenes || []) {
 		defs.push({ variableId: `scene_${s.ItemId}_name`, name: `Szene ${s.ItemId}: Name (${sceneName(s)})` })
+		defs.push({ variableId: `scene_${s.ItemId}_label`, name: `Szene ${s.ItemId}: Name für Tasten (umbrochen, Größe 14)` })
 		defs.push({ variableId: `scene_${s.ItemId}_active`, name: `Szene ${s.ItemId}: aktiv (true/false)` })
 	}
 	self.setVariableDefinitions(defs)

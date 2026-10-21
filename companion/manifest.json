@@ -19,7 +19,10 @@
 		"type": "node22",
 		"api": "nodejs-ipc",
 		"apiVersion": "1.12.1",
-		"entrypoint": "../src/main.js"
+		"entrypoint": "../src/main.js",
+		"permissions": {
+			"filesystem": true
+		}
 	},
 	"legacyIds": [],
 	"manufacturer": "KKT Künzler Technologies",

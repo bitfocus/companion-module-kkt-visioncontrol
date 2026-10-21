@@ -46,8 +46,8 @@ const WHITE = combineRgb(255, 255, 255)
 const GREEN = combineRgb(0, 153, 51)
 const RED = combineRgb(204, 0, 0)
 
-// Balken unter dem Symbol: orange gefüllt (wie der Aktiv-Rahmen), Rest dunkelgrau
-const BAR = { x: 6, y: 38, width: 60, height: 6 }
+// Balken zwischen Symbol (bis y 33) und Wert: orange gefüllt (wie der Aktiv-Rahmen), Rest dunkelgrau
+const BAR = { x: 8, y: 37, width: 56, height: 5 }
 function levelBar(fraction) {
 	const f = Math.max(0, Math.min(1, fraction || 0))
 	const filled = Math.round(f * BAR.width)

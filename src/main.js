@@ -8,6 +8,7 @@ const { findContent, describeActive, adjustContent, fingerprintOfEntry } = requi
 const { sceneName, scenesSignature } = require('./scenes')
 const { networkStatus } = require('./devices')
 const { readLocalScenes } = require('./localscenes')
+const { labelText } = require('./labels')
 
 const REQUEST_TIMEOUT_MS = 5000
 const MAX_TRANSIENT_RETRIES = 3
@@ -272,6 +273,8 @@ class VisionControlInstance extends InstanceBase {
 		const sceneVars = {}
 		for (const s of this.scenes || []) {
 			sceneVars[`scene_${s.ItemId}_name`] = sceneName(s)
+			// Für Tasten: in Schriftgröße 14 umbrochen, passt unter das Symbol
+			sceneVars[`scene_${s.ItemId}_label`] = labelText(sceneName(s), 14, 36).text
 			sceneVars[`scene_${s.ItemId}_active`] = s.Active ? 'true' : 'false'
 		}
 		const net = this.networkStatusNow()
