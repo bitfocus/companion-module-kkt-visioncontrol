@@ -1,16 +1,18 @@
 # companion-module-visioncontrol
 
-Ein [Bitfocus Companion](https://bitfocus.io/companion) Modul für die **Vision Control App** von KKT Künzler Technologies. Es steuert die App über ihre lokale REST-API: Szenen und Sequenzen, Farbe und Dimmer, einen Farbwechsel-Effekt sowie den Sound-Trigger.
+Ein [Bitfocus Companion](https://bitfocus.io/companion) Modul für die **Vision Control App** von KKT Künzler Technologies. Es steuert die App über ihre lokale REST-API: Farbe, Helligkeit, Effekte, Szenen und den Sound-Trigger.
 
 ## Funktionen
 
-- Szenen / Sequenzen an, aus, umschalten
-- Farbe und Dimmer für Gruppen oder einzelne Fixtures setzen (mit Überblendung)
-- Blackout
-- Effekt: laufender RGB-Farbwechsel
-- Sound-Control-Trigger
-- Feedbacks: aktive Szene, Verbindungsstatus
-- Variablen: Netzwerkname, Netzwerk-ID, Anzahl Szenen, Verbindungsstatus
+- Farbe und Dimmer für Gruppen oder einzelne Fixtures setzen (mit Überblendung), Blackout
+- Effekt-Katalog mit 38 fertigen Effekten (Matrix- und Geräte-Pixel, Fitnessstudio-Konzept), Werte einzeln überschreibbar
+- Effekte frei bauen: Muster, Geometrie, Farben, Tempo, Range, Auslöser (Tap, Beat, Pulse)
+- Laufenden Effekt anpassen: schneller, langsamer, heller, dunkler, Range
+- **Drehregler (Stream Deck +):** drehen = Helligkeit, drücken = Blackout an/aus, Balken auf dem Display
+- Anzeige des aktiven Effekts mit seiner Kachel, Netzwerk-Geräte und App-Erreichbarkeit
+- Szenen / Sequenzen an, aus, umschalten; Namen automatisch aus der App
+- Lokale Variablen der Taste für Ziel und Szene
+- Einheitliches Icon Pack für alle Tasten
 
 Details zur Einrichtung stehen in [`companion/HELP.md`](companion/HELP.md).
 

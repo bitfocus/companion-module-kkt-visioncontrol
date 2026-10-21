@@ -199,6 +199,34 @@ module.exports = function (self) {
 			},
 		},
 
+		dimmer_step: {
+			name: 'Helligkeit schrittweise (Drehregler)',
+			description: 'Für Drehregler, z. B. Stream Deck +: links drehen = negativer Schritt, rechts = positiver. Schnelles Drehen wird zusammengefasst.',
+			options: [
+				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				{ id: 'step', type: 'number', label: 'Schritt in Prozentpunkten (negativ = dunkler)', default: 5, min: -100, max: 100 },
+			],
+			callback: async (event, context) => {
+				const id = Number(await parse(context, event.options.id))
+				await self.stepDimmer(event.options.target, id, Number(event.options.step) || 0)
+			},
+		},
+
+		dimmer_toggle: {
+			name: 'Blackout an/aus (Helligkeit merken)',
+			description: 'Schaltet auf 0 und beim nächsten Mal zurück auf die Helligkeit davor.',
+			options: [
+				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				{ id: 'fade', type: 'number', label: 'Überblendung (0=sofort … 255=max, keine Sekunden)', default: 0, min: 0, max: 255 },
+			],
+			callback: async (event, context) => {
+				const id = Number(await parse(context, event.options.id))
+				await self.toggleBlackout(event.options.target, id, event.options.fade)
+			},
+		},
+
 		color_chase: {
 			name: 'Effekt: Farbwechsel (RGB-Fx)',
 			options: [

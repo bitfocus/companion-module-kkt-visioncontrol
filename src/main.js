@@ -11,6 +11,9 @@ const { readLocalScenes } = require('./localscenes')
 
 const REQUEST_TIMEOUT_MS = 5000
 const MAX_TRANSIENT_RETRIES = 3
+// Solange gilt ein Drehregler-Wert als aktuell, auch wenn die Abfrage noch den alten Stand liefert
+const DIM_HOLD_MS = 2500
+const DIM_FULL = 65535
 
 class VisionControlInstance extends InstanceBase {
 	constructor(internal) {
@@ -30,6 +33,9 @@ class VisionControlInstance extends InstanceBase {
 		this.scenesReadError = null
 		this.devices = [] // Geräte des Netzwerks aus GET /Network/Info (auch ausgeschaltete)
 		this.devicesReadOk = false
+		this.dimPending = {} // 'group:0' -> { value, at } letzter Helligkeitswert vom Drehregler
+		this.dimSending = {} // 'group:0' -> true, solange ein Helligkeitsbefehl unterwegs ist
+		this.dimMemory = {} // 'group:0' -> Helligkeit vor dem Blackout
 	}
 
 	async init(config) {
@@ -237,7 +243,7 @@ class VisionControlInstance extends InstanceBase {
 
 			this.connected = true
 			this.updateStatus(InstanceStatus.Ok)
-			this.checkFeedbacks('scene_active', 'connected', 'effect_active', 'color_active', 'active_effect_image', 'network_status')
+			this.checkFeedbacks('scene_active', 'connected', 'effect_active', 'color_active', 'active_effect_image', 'network_status', 'dimmer_level')
 			this.updateVariables()
 		} catch (e) {
 			this.connected = false
@@ -297,7 +303,10 @@ class VisionControlInstance extends InstanceBase {
 
 	async readProgrammer() {
 		const res = await this.http('GET', '/Control', undefined, true)
-		if (res.ok) this.programmer = await res.json()
+		if (res.ok) {
+			this.programmer = await res.json()
+			this.applyPendingDimmer()
+		}
 		return this.programmer
 	}
 
@@ -319,7 +328,7 @@ class VisionControlInstance extends InstanceBase {
 			this.refreshTimer = null
 			try {
 				await this.readProgrammer()
-				this.checkFeedbacks('effect_active', 'color_active', 'active_effect_image')
+				this.checkFeedbacks('effect_active', 'color_active', 'active_effect_image', 'dimmer_level')
 				this.updateVariables()
 			} catch (e) {
 				this.log('debug', `Aktualisierung fehlgeschlagen: ${e.message || e}`)
@@ -337,6 +346,69 @@ class VisionControlInstance extends InstanceBase {
 		}
 		await this.setControl(target, id, partial, 0)
 		this.scheduleRefresh()
+	}
+
+	// ---- Helligkeit per Drehregler -------------------------------------------
+
+	/** Aktuelle Helligkeit 0..65535: frischer Drehregler-Wert, sonst der zuletzt gelesene Stand */
+	dimmerNow(target, id) {
+		const p = this.dimPending[`${target}:${id}`]
+		if (p && Date.now() - p.at < DIM_HOLD_MS) return p.value
+		const c = findContent(this.programmer, target, id)
+		return c && c.MasterDimmer && typeof c.MasterDimmer.Value === 'number' ? c.MasterDimmer.Value : DIM_FULL
+	}
+
+	/** Frische Drehregler-Werte in den gelesenen Stand eintragen, damit Anzeige und Feedbacks nicht zurückspringen */
+	applyPendingDimmer() {
+		for (const [key, p] of Object.entries(this.dimPending)) {
+			if (Date.now() - p.at >= DIM_HOLD_MS) continue
+			const [target, id] = key.split(':')
+			const c = findContent(this.programmer, target, id)
+			if (c) c.MasterDimmer = { ...(c.MasterDimmer || {}), Default: false, Value: p.value }
+		}
+	}
+
+	/** Helligkeit um stepPct Prozentpunkte ändern (positiv = heller) */
+	async stepDimmer(target, id, stepPct) {
+		const value = this.dimmerNow(target, id) + Math.round((stepPct / 100) * DIM_FULL)
+		await this.setDimmerQueued(target, id, value, 0)
+	}
+
+	/** Blackout an/aus: merkt sich die Helligkeit davor und stellt sie wieder her */
+	async toggleBlackout(target, id, fade) {
+		const key = `${target}:${id}`
+		const cur = this.dimmerNow(target, id)
+		if (cur > 0) {
+			this.dimMemory[key] = cur
+			await this.setDimmerQueued(target, id, 0, fade)
+		} else {
+			await this.setDimmerQueued(target, id, this.dimMemory[key] || DIM_FULL, fade)
+		}
+	}
+
+	/**
+	 * Setzt die Helligkeit. Schnelle Drehregler-Schritte werden zusammengefasst:
+	 * Läuft schon ein Befehl, wird danach nur der neueste Wert gesendet.
+	 */
+	async setDimmerQueued(target, id, value, fade) {
+		const key = `${target}:${id}`
+		const v = Math.max(0, Math.min(DIM_FULL, Math.round(value)))
+		this.dimPending[key] = { value: v, at: Date.now() }
+		this.applyPendingDimmer()
+		this.updateVariables()
+		this.checkFeedbacks('active_effect_image', 'effect_active', 'color_active', 'dimmer_level')
+		if (this.dimSending[key]) return
+		this.dimSending[key] = true
+		try {
+			let sent = null
+			while (sent !== this.dimPending[key].value) {
+				sent = this.dimPending[key].value
+				await this.setControl(target, Number(id), { MasterDimmer: { Default: false, Value: sent, Fx: null } }, fade)
+			}
+		} finally {
+			this.dimSending[key] = false
+			this.scheduleRefresh(300)
+		}
 	}
 
 	// ---- Steuer-Helfer --------------------------------------------------------

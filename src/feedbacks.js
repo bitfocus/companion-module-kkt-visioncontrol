@@ -46,8 +46,28 @@ const WHITE = combineRgb(255, 255, 255)
 const GREEN = combineRgb(0, 153, 51)
 const RED = combineRgb(204, 0, 0)
 
+// Balken unter dem Symbol: orange gefüllt (wie der Aktiv-Rahmen), Rest dunkelgrau
+const BAR = { x: 6, y: 38, width: 60, height: 6 }
+function levelBar(fraction) {
+	const f = Math.max(0, Math.min(1, fraction || 0))
+	const filled = Math.round(f * BAR.width)
+	const buf = Buffer.alloc(BAR.width * BAR.height * 4)
+	for (let y = 0; y < BAR.height; y++) {
+		for (let x = 0; x < BAR.width; x++) {
+			const i = (y * BAR.width + x) * 4
+			const [r, g, b] = x < filled ? [255, 122, 0] : [85, 85, 85]
+			buf[i] = r
+			buf[i + 1] = g
+			buf[i + 2] = b
+			buf[i + 3] = 255
+		}
+	}
+	return { imageBuffer: buf.toString('base64'), imageBufferEncoding: { pixelFormat: 'RGBA' }, imageBufferPosition: BAR }
+}
+
 module.exports = UpdateFeedbacks
 module.exports.activeImageStyle = activeImageStyle
+module.exports.levelBar = levelBar
 
 function UpdateFeedbacks(self) {
 	// Variablen im Kontext der Taste auflösen, inkl. lokaler Variablen
@@ -120,6 +140,21 @@ function UpdateFeedbacks(self) {
 			callback: async (feedback, context) => {
 				const o = feedback.options
 				return activeImageStyle(self.activeFor(o.target, Number(await parse(context, o.id)) || 0))
+			},
+		},
+
+		dimmer_level: {
+			name: 'Helligkeit als Balken',
+			description: 'Zeichnet die aktuelle Helligkeit als Balken, z. B. für den Drehregler am Stream Deck +.',
+			type: 'advanced',
+			options: [
+				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
+				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+			],
+			callback: async (feedback, context) => {
+				const o = feedback.options
+				const id = Number(await parse(context, o.id)) || 0
+				return levelBar(self.dimmerNow(o.target, id) / 65535)
 			},
 		},
 

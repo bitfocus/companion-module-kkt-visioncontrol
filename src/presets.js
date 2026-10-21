@@ -221,6 +221,48 @@ module.exports = function (self) {
 		feedbacks: [],
 	}
 
+	// ---- Drehregler (Stream Deck +) -------------------------------------------
+	// Drehen ändert die Helligkeit, Drücken schaltet Blackout an/aus.
+	// Der Balken zeigt die Helligkeit auf dem Display über dem Regler.
+
+	presets['encoder_dimmer'] = {
+		type: 'button',
+		category: 'Drehregler (Stream Deck +)',
+		name: 'Helligkeit: drehen = heller/dunkler, drücken = Blackout an/aus',
+		options: { rotaryActions: true },
+		style: {
+			text: `$(${label}:active_dimmer)`,
+			size: '18',
+			color: WHITE,
+			bgcolor: combineRgb(40, 40, 40),
+			png64: icon('dimmer', 'light'),
+			pngalignment: 'center:top',
+			alignment: 'center:bottom',
+		},
+		steps: [
+			{
+				down: [{ actionId: 'dimmer_toggle', options: { target: 'group', id: GROUP, fade: 0 } }],
+				up: [],
+				rotate_left: [{ actionId: 'dimmer_step', options: { target: 'group', id: GROUP, step: -5 } }],
+				rotate_right: [{ actionId: 'dimmer_step', options: { target: 'group', id: GROUP, step: 5 } }],
+			},
+		],
+		feedbacks: [{ feedbackId: 'dimmer_level', options: { target: 'group', id: GROUP } }],
+	}
+
+	presets['encoder_dimmer_fine'] = {
+		...presets['encoder_dimmer'],
+		name: 'Helligkeit fein (1 % je Raste)',
+		steps: [
+			{
+				down: [{ actionId: 'dimmer_toggle', options: { target: 'group', id: GROUP, fade: 0 } }],
+				up: [],
+				rotate_left: [{ actionId: 'dimmer_step', options: { target: 'group', id: GROUP, step: -1 } }],
+				rotate_right: [{ actionId: 'dimmer_step', options: { target: 'group', id: GROUP, step: 1 } }],
+			},
+		],
+	}
+
 	// ---- Szenen: automatisch aus der App ----------------------------------------
 	// Der Tastentext ist die Namens-Variable der Szene, damit Umbenennungen in
 	// der App auch bereits platzierte Tasten erreichen.

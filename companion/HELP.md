@@ -26,6 +26,8 @@ Das Modul meldet sich automatisch an, erneuert das Token vor Ablauf und wiederho
 - **Farbe & Dimmer setzen**, **Dimmer setzen**, **Blackout**
 - **Effekt aus Katalog** – fertige Effekte per Auswahlliste. Optional lassen sich einzelne Werte überschreiben (Häkchen setzen, dann erscheinen die Felder):
   - Helligkeit, Tempo (Sekunden pro Farbschritt und Weichheit), Range, eigene Farben, Richtung umkehren
+- **Helligkeit schrittweise (Drehregler)** – ändert die Helligkeit um einen Schritt in Prozentpunkten (negativ = dunkler). Schnelles Drehen wird zusammengefasst, es geht kein Schritt verloren.
+- **Blackout an/aus (Helligkeit merken)** – schaltet auf 0 und beim nächsten Druck zurück auf die Helligkeit davor
 - **Laufenden Effekt anpassen** – Schneller, Langsamer, Heller, Dunkler, Range erhöhen oder verringern. Wirkt auf den Effekt, der gerade läuft, auch wenn er in der App gestartet wurde.
 - **Effekt: Muster & Geometrie** – alles frei einstellbar: Muster, Geometrie, bis zu drei Farben, Tempo, Range, Variation, Bounce, Rückwärts, Auslöser (frei, Tap, Beat, Pulse) und Helligkeit
 - **Effekt: Farbwechsel** – drei Farben mit Tempo und Weichheit
@@ -40,7 +42,18 @@ Das Modul meldet sich automatisch an, erneuert das Token vor Ablauf und wiederho
 - *Fitness: Bereiche* – Empfang, Cardio, Kraft, Athletik, Stretch, Wellness
 - *Fitness: Kurse* – Warm-up, Spinning (Beat), HIIT, Power Beat (Bass-Pulse), Dance (Beat), Pause, Cool-down, Yoga, Finish
 
+## Stream Deck + (Drehregler)
+
+Unter *Drehregler (Stream Deck +)* liegen zwei Presets für die Drehregler:
+
+- **Helligkeit** – rechts drehen = heller, links = dunkler (5 % je Raste), drücken = Blackout an/aus
+- **Helligkeit fein** – dasselbe mit 1 % je Raste
+
+Das Display über dem Regler zeigt das Dimmer-Symbol, einen orangen Balken und den Wert in %. Das Preset auf einen Drehregler ziehen; Schrittweite und Gruppe lassen sich in den Aktionen ändern. Für eigene Tasten im Button-Editor „Drehaktionen aktivieren“ einschalten und die Aktion *Helligkeit schrittweise* unter „Links drehen“ / „Rechts drehen“ eintragen.
+
 ## Feedbacks
+
+- **Helligkeit als Balken** – zeichnet die aktuelle Helligkeit als Balken, z. B. auf dem Display des Stream Deck +
 
 - **Katalog-Effekt ist aktiv** – die Taste des laufenden Effekts bekommt einen orangen Rahmen (wie die ausgewählte Kachel in der App)
 - **Farbe ist aktiv** – dasselbe für die Farbtasten
