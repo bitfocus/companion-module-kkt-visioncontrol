@@ -66,6 +66,24 @@ function readLocalScenes() {
 	return [...out.values()].sort((a, b) => a.ItemId - b.ItemId)
 }
 
+/** Gespeicherte Szene (CreativeScene) mit allen Werten, oder null */
+function readLocalSceneDetail(id) {
+	for (const dir of findLocalStateDirs()) {
+		for (const file of FILES) {
+			const full = path.join(dir, file)
+			if (!fs.existsSync(full)) continue
+			try {
+				const data = JSON.parse(fs.readFileSync(full, 'utf8'))
+				const hit = ((data && data.Scenes) || []).find((it) => it && it.CreativeScene && String(it.CreativeScene.ID) === String(id))
+				if (hit) return hit.CreativeScene
+			} catch {
+				// nächste Datei
+			}
+		}
+	}
+	return null
+}
+
 /**
  * Beobachtet die Szenendateien der App und ruft onChange (entprellt) auf,
  * sobald die App eine Szene anlegt, umbenennt oder löscht.
@@ -96,4 +114,4 @@ function watchLocalScenes(onChange, debounceMs = 200) {
 	}
 }
 
-module.exports = { readLocalScenes, watchLocalScenes }
+module.exports = { readLocalScenes, readLocalSceneDetail, watchLocalScenes }

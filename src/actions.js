@@ -115,7 +115,7 @@ module.exports = function (self) {
 			options: [sceneOption()],
 			callback: async (event, context) => {
 				const id = await sceneId(event.options.itemId, context)
-				await self.expectHandled(await self.http('POST', `/Scenes/${encodeURIComponent(id)}/On`), 'Szene An')
+				await self.switchScene(id, true)
 			},
 		},
 
@@ -124,7 +124,7 @@ module.exports = function (self) {
 			options: [sceneOption()],
 			callback: async (event, context) => {
 				const id = await sceneId(event.options.itemId, context)
-				await self.expectHandled(await self.http('POST', `/Scenes/${encodeURIComponent(id)}/Off`), 'Szene Aus')
+				await self.switchScene(id, false)
 			},
 		},
 
@@ -134,7 +134,7 @@ module.exports = function (self) {
 			callback: async (event, context) => {
 				const id = await sceneId(event.options.itemId, context)
 				const isOn = !!self.sceneActive[String(id)]
-				await self.expectHandled(await self.http('POST', `/Scenes/${encodeURIComponent(id)}/${isOn ? 'Off' : 'On'}`), 'Szene umschalten')
+				await self.switchScene(id, !isOn)
 				// Lokalen Status sofort umschalten, damit schnelle Mehrfachklicks
 				// nicht am Abfrage-Intervall hängen; das nächste Polling korrigiert.
 				self.sceneActive[String(id)] = !isOn

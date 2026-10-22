@@ -7,7 +7,8 @@ const UpdatePresets = require('./presets')
 const { findContent, describeActive, adjustContent, fingerprintOfEntry } = require('./active')
 const { sceneName, scenesSignature } = require('./scenes')
 const { networkStatus } = require('./devices')
-const { readLocalScenes, watchLocalScenes } = require('./localscenes')
+const { readLocalScenes, readLocalSceneDetail, watchLocalScenes } = require('./localscenes')
+const { sceneToControl, sceneOffControl } = require('./scenecontent')
 const { labelText } = require('./labels')
 
 const REQUEST_TIMEOUT_MS = 5000
@@ -38,6 +39,8 @@ class VisionControlInstance extends InstanceBase {
 		this.dimPending = {} // 'group:0' -> { value, at } letzter Helligkeitswert vom Drehregler
 		this.dimSending = {} // 'group:0' -> true, solange ein Helligkeitsbefehl unterwegs ist
 		this.dimMemory = {} // 'group:0' -> Helligkeit vor dem Blackout
+		this.sceneApiBroken = false // Szenen-API der App verarbeitet keine Befehle (2.17.3/2.18.4)
+		this.localSceneOn = null // per Ersatzweg gestartete Szene
 	}
 
 	async init(config) {
@@ -132,6 +135,7 @@ class VisionControlInstance extends InstanceBase {
 		}
 		this.updateStatus(InstanceStatus.Connecting)
 		this.token = null
+		this.sceneApiBroken = false // nach Neuverbindung (evtl. neue App-Version) wieder zuerst die API versuchen
 		// Die Abfrage läuft immer, auch wenn die App beim Start nicht erreichbar ist
 		// (z. B. nach einem App-Update mit noch abgeschalteter API). Sonst bliebe das
 		// Modul "offline", obwohl Befehle längst wieder funktionieren.
@@ -317,7 +321,9 @@ class VisionControlInstance extends InstanceBase {
 		this.scenes = scenes
 		this.sceneActive = {}
 		for (const s of this.scenes) {
-			this.sceneActive[String(s.ItemId)] = !!s.Active
+			// Lokal gelesene Szenen kennen keinen Status: dann gilt die per Ersatzweg gestartete
+			const local = s.source === 'local' && String(s.ItemId) === String(this.localSceneOn)
+			this.sceneActive[String(s.ItemId)] = !!s.Active || local
 		}
 		// Neue, gelöschte, umbenannte oder verschobene Szenen: Definitionen neu aufbauen
 		const sig = scenesSignature(this.scenes)
@@ -424,6 +430,42 @@ class VisionControlInstance extends InstanceBase {
 		}
 		await this.setControl(target, id, partial, 0)
 		this.scheduleRefresh()
+	}
+
+	// ---- Szenen schalten -------------------------------------------------------
+
+	/**
+	 * Szene an/aus. Zuerst über die Szenen-API; verarbeitet die App sie nicht
+	 * (2.17.3/2.18.4), wird die gespeicherte Szene aus den lokalen Szenendateien
+	 * über POST /Control nachgebildet.
+	 */
+	async switchScene(id, on) {
+		const what = on ? 'Szene An' : 'Szene Aus'
+		if (!this.sceneApiBroken) {
+			const res = await this.http('POST', `/Scenes/${encodeURIComponent(id)}/${on ? 'On' : 'Off'}`)
+			try {
+				await this.expectHandled(res, what)
+				return
+			} catch (e) {
+				if (this.config.localScenes === false) throw e
+				this.sceneApiBroken = true
+				this.log('info', `${what} über die API nicht möglich (${e.message}). Ersatzweg: Szene aus den lokalen App-Dateien über /Control.`)
+			}
+		}
+		const scene = this.config.localScenes === false ? null : readLocalSceneDetail(id)
+		if (!scene) throw new Error(`${what}: Szene ${id} nicht in den lokalen App-Dateien gefunden (Companion muss auf dem PC der App laufen).`)
+		const plan = on ? sceneToControl(scene) : sceneOffControl(scene)
+		if (!plan.groups.length) throw new Error(`${what}: Szene "${scene.Name}" enthält keine übertragbaren Werte.`)
+		if (on && plan.skipped && plan.skipped.length) {
+			this.log('debug', `Szene "${scene.Name}": Komponenten ${plan.skipped.join(', ')} noch nicht unterstützt, übersprungen.`)
+		}
+		const res = await this.http('POST', '/Control', { FadeTime: plan.fade, Fixtures: [], Groups: plan.groups })
+		await this.expectHandled(res, what)
+		this.localSceneOn = on ? String(id) : this.localSceneOn === String(id) ? null : this.localSceneOn
+		for (const s of this.scenes) this.sceneActive[String(s.ItemId)] = String(s.ItemId) === String(this.localSceneOn)
+		this.checkFeedbacks('scene_active')
+		this.updateVariables()
+		this.scheduleRefresh(150)
 	}
 
 	// ---- Helligkeit per Drehregler -------------------------------------------
