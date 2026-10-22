@@ -22,6 +22,8 @@ const DIMMER_FALLBACK = 35
 const DIM_FULL = 65535
 const KNOWN = new Set([DIMMER, RED, GREEN, BLUE, DIMMER_FALLBACK])
 
+const { fingerprintOfFx } = require('./fx')
+
 const byte = (v) => Math.max(0, Math.min(255, Math.round(Number(v) || 0)))
 const word = (v) => Math.max(0, Math.min(65535, Math.round(Number(v) || 0)))
 const isFx = (c) => !!(c && c.Scene && Array.isArray(c.Scene.Scene))
@@ -118,4 +120,29 @@ function sceneOffControl(scene) {
 	}
 }
 
-module.exports = { sceneToControl, sceneOffControl }
+/** Vergleichsschlüssel für Farbe/Effekt; Tempo und Dimmer zählen nicht mit */
+function colorKey(rgb) {
+	if (!rgb) return null
+	if (rgb.Fx) return 'fx|' + fingerprintOfFx(rgb.Fx)
+	const v = rgb.Value
+	return v ? `static|${word(v.Value1)},${word(v.Value2)},${word(v.Value3)}` : null
+}
+
+/**
+ * Läuft diese Szene gerade? Wahr, wenn in allen Gruppen der Szene genau ihre
+ * Farbe bzw. ihr Farbeffekt im Programmer steht (GET /Control). Helligkeit und
+ * Tempo dürfen abweichen, z. B. nach dem Drehregler.
+ */
+function sceneMatches(scene, programmer) {
+	if (!scene || !programmer) return false
+	const { groups } = sceneToControl(scene)
+	const withColor = groups.filter((g) => g.Content.RGB)
+	if (!withColor.length) return false
+	return withColor.every((g) => {
+		const cur = (programmer.Groups || []).find((x) => Number(x.GroupID) === g.GroupID)
+		const key = colorKey(cur && cur.Content && cur.Content.RGB)
+		return key !== null && key === colorKey(g.Content.RGB)
+	})
+}
+
+module.exports = { sceneToControl, sceneOffControl, sceneMatches }

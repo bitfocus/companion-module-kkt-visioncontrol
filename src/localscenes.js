@@ -58,7 +58,8 @@ function readLocalScenes() {
 				const s = item && item.CreativeScene
 				if (!s || s.ID === undefined) continue
 				if (!out.has(s.ID)) {
-					out.set(s.ID, { ItemId: s.ID, Path: String(s.Name || `Szene ${s.ID}`), Type: 'Scene', Active: false, source: 'local' })
+					// detail: gespeicherte Werte, um die laufende Szene am Programmer zu erkennen
+					out.set(s.ID, { ItemId: s.ID, Path: String(s.Name || `Szene ${s.ID}`), Type: 'Scene', Active: false, source: 'local', detail: s })
 				}
 			}
 		}

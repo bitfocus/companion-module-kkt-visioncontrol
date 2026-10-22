@@ -8,7 +8,7 @@ const { findContent, describeActive, adjustContent, fingerprintOfEntry } = requi
 const { sceneName, scenesSignature } = require('./scenes')
 const { networkStatus } = require('./devices')
 const { readLocalScenes, readLocalSceneDetail, watchLocalScenes } = require('./localscenes')
-const { sceneToControl, sceneOffControl } = require('./scenecontent')
+const { sceneToControl, sceneOffControl, sceneMatches } = require('./scenecontent')
 const { labelText } = require('./labels')
 
 const REQUEST_TIMEOUT_MS = 5000
@@ -40,7 +40,6 @@ class VisionControlInstance extends InstanceBase {
 		this.dimSending = {} // 'group:0' -> true, solange ein Helligkeitsbefehl unterwegs ist
 		this.dimMemory = {} // 'group:0' -> Helligkeit vor dem Blackout
 		this.sceneApiBroken = false // Szenen-API der App verarbeitet keine Befehle (2.17.3/2.18.4)
-		this.localSceneOn = null // per Ersatzweg gestartete Szene
 	}
 
 	async init(config) {
@@ -319,12 +318,7 @@ class VisionControlInstance extends InstanceBase {
 			}
 		}
 		this.scenes = scenes
-		this.sceneActive = {}
-		for (const s of this.scenes) {
-			// Lokal gelesene Szenen kennen keinen Status: dann gilt die per Ersatzweg gestartete
-			const local = s.source === 'local' && String(s.ItemId) === String(this.localSceneOn)
-			this.sceneActive[String(s.ItemId)] = !!s.Active || local
-		}
+		this.updateSceneActive()
 		// Neue, gelöschte, umbenannte oder verschobene Szenen: Definitionen neu aufbauen
 		const sig = scenesSignature(this.scenes)
 		if (sig !== this.scenesSig) {
@@ -390,6 +384,7 @@ class VisionControlInstance extends InstanceBase {
 		if (res.ok) {
 			this.programmer = await res.json()
 			this.applyPendingDimmer()
+			this.updateSceneActive()
 		}
 		return this.programmer
 	}
@@ -432,6 +427,23 @@ class VisionControlInstance extends InstanceBase {
 		this.scheduleRefresh()
 	}
 
+	/**
+	 * Aktiv-Status der Szenen. Von der API gelesene Szenen bringen ihn mit; lokal
+	 * gelesene werden am laufenden Zustand erkannt (gleiche Farbe bzw. gleicher
+	 * Farbeffekt im Programmer). So erlischt eine Szene, sobald ein anderes
+	 * Preset oder die App etwas anderes setzt, und in der App gestartete Szenen
+	 * leuchten ebenfalls.
+	 */
+	updateSceneActive() {
+		const next = {}
+		for (const s of this.scenes || []) {
+			next[String(s.ItemId)] = s.source === 'local' ? sceneMatches(s.detail, this.programmer) : !!s.Active
+		}
+		const changed = JSON.stringify(next) !== JSON.stringify(this.sceneActive || {})
+		this.sceneActive = next
+		if (changed) this.checkFeedbacks('scene_active')
+	}
+
 	// ---- Szenen schalten -------------------------------------------------------
 
 	/**
@@ -461,11 +473,10 @@ class VisionControlInstance extends InstanceBase {
 		}
 		const res = await this.http('POST', '/Control', { FadeTime: plan.fade, Fixtures: [], Groups: plan.groups })
 		await this.expectHandled(res, what)
-		this.localSceneOn = on ? String(id) : this.localSceneOn === String(id) ? null : this.localSceneOn
-		for (const s of this.scenes) this.sceneActive[String(s.ItemId)] = String(s.ItemId) === String(this.localSceneOn)
-		this.checkFeedbacks('scene_active')
+		// Status gleich am echten Zustand der App prüfen
+		await this.readProgrammer()
+		this.checkFeedbacks('effect_active', 'color_active', 'active_effect_image', 'dimmer_level')
 		this.updateVariables()
-		this.scheduleRefresh(150)
 	}
 
 	// ---- Helligkeit per Drehregler -------------------------------------------
