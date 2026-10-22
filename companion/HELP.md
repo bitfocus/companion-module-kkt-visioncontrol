@@ -15,7 +15,7 @@ Steuert die **Vision Control App** (KKT Künzler Technologies) über ihre lokale
 | IP-Adresse der App | z. B. `192.168.1.189`, oder `127.0.0.1`, wenn Companion auf demselben Rechner läuft |
 | Port | Standard `5123` |
 | Netzwerk-Passwort | Passwort des Vision-Netzwerks |
-| Abfrage-Intervall | Wie oft Szenen und Netzwerk-Geräte gelesen werden (Standard 2000 ms) |
+| Abfrage-Intervall Szenen / Geräte | Wie oft Netzwerk-Geräte und Szenen gelesen werden (Standard 1000 ms, eine Abfrage dauert ca. 35 ms). Szenen aus den lokalen App-Dateien kommen zusätzlich sofort, sobald die App sie speichert. |
 | Abfrage Helligkeit / laufender Effekt | Wie oft nur der laufende Zustand gelesen wird, damit Helligkeit und Effekt-Anzeigen Änderungen aus der App schnell übernehmen (Standard 500 ms, 0 = aus) |
 | Gruppe für Statusanzeige | GroupID, deren Effekt in den Variablen erscheint (Standard `0`) |
 

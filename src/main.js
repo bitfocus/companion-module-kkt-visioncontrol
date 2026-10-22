@@ -7,7 +7,7 @@ const UpdatePresets = require('./presets')
 const { findContent, describeActive, adjustContent, fingerprintOfEntry } = require('./active')
 const { sceneName, scenesSignature } = require('./scenes')
 const { networkStatus } = require('./devices')
-const { readLocalScenes } = require('./localscenes')
+const { readLocalScenes, watchLocalScenes } = require('./localscenes')
 const { labelText } = require('./labels')
 
 const REQUEST_TIMEOUT_MS = 5000
@@ -60,6 +60,7 @@ class VisionControlInstance extends InstanceBase {
 			clearInterval(this.fastTimer)
 			this.fastTimer = null
 		}
+		this.stopSceneWatch()
 		if (this.refreshTimer) {
 			clearTimeout(this.refreshTimer)
 			this.refreshTimer = null
@@ -87,7 +88,7 @@ class VisionControlInstance extends InstanceBase {
 			{ type: 'textinput', id: 'host', label: 'IP-Adresse der App', width: 6, default: '127.0.0.1', regex: Regex.IP },
 			{ type: 'textinput', id: 'port', label: 'Port', width: 3, default: '5123', regex: Regex.PORT },
 			{ type: 'textinput', id: 'password', label: 'Netzwerk-Passwort', width: 6 },
-			{ type: 'number', id: 'poll', label: 'Abfrage-Intervall (ms)', width: 3, default: 2000, min: 500, max: 60000 },
+			{ type: 'number', id: 'poll', label: 'Abfrage-Intervall Szenen / Geräte (ms)', width: 3, default: 1000, min: 500, max: 60000 },
 			{
 				type: 'number',
 				id: 'fastPoll',
@@ -124,6 +125,7 @@ class VisionControlInstance extends InstanceBase {
 			clearInterval(this.fastTimer)
 			this.fastTimer = null
 		}
+		this.stopSceneWatch()
 		if (!this.config.host) {
 			this.updateStatus(InstanceStatus.BadConfig, 'Keine IP-Adresse gesetzt')
 			return
@@ -133,13 +135,31 @@ class VisionControlInstance extends InstanceBase {
 		// Die Abfrage läuft immer, auch wenn die App beim Start nicht erreichbar ist
 		// (z. B. nach einem App-Update mit noch abgeschalteter API). Sonst bliebe das
 		// Modul "offline", obwohl Befehle längst wieder funktionieren.
-		const interval = Math.max(500, Number(this.config.poll) || 2000)
+		const interval = Math.max(500, Number(this.config.poll) || 1000)
 		this.pollTimer = setInterval(() => this.pollSafe(), interval)
 		// Helligkeit und laufender Effekt ändern sich oft (auch in der App) – diese
 		// kleine Abfrage läuft schneller als die große mit Szenen und Geräten.
 		const fast = Number(this.config.fastPoll ?? 500)
 		if (fast > 0) this.fastTimer = setInterval(() => this.refreshProgrammer(), Math.max(200, fast))
+		// Szenen aus der App sofort übernehmen, statt auf die nächste Abfrage zu warten
+		if (this.config.localScenes !== false) this.sceneWatchStop = watchLocalScenes(() => this.refreshScenes())
 		await this.pollSafe()
+	}
+
+	stopSceneWatch() {
+		if (this.sceneWatchStop) this.sceneWatchStop()
+		this.sceneWatchStop = null
+	}
+
+	/** Szenen neu lesen, wenn die App ihre Szenendateien geändert hat */
+	async refreshScenes() {
+		try {
+			await this.readScenes()
+			this.checkFeedbacks('scene_active')
+			this.updateVariables()
+		} catch (e) {
+			this.log('debug', `Szenen-Aktualisierung fehlgeschlagen: ${e.message || e}`)
+		}
 	}
 
 	/** Nur den laufenden Zustand lesen und Anzeigen aktualisieren, ohne Überlappung */
@@ -255,41 +275,7 @@ class VisionControlInstance extends InstanceBase {
 				this.network = await nres.json()
 			}
 
-			const sres = await this.http('GET', '/Scenes', undefined, true)
-			let scenes = []
-			if (sres.ok) {
-				const data = await sres.json()
-				scenes = Array.isArray(data) ? data : []
-				this.scenesReadError = null
-			} else {
-				// Vision Control 2.17.3 und 2.18.4: GET /Scenes antwortet mit HTTP 500, auch wenn
-				// Szenen existieren. Rückfall: Namen aus den lokalen Szenendateien der App.
-				const useLocal = this.config.localScenes !== false
-				if (useLocal) scenes = readLocalScenes()
-				if (this.scenesReadError !== sres.status) {
-					this.scenesReadError = sres.status
-					this.log(
-						'warn',
-						`Szenenliste über die API nicht lesbar (HTTP ${sres.status}, Fehler der App).` +
-							(useLocal ? ` ${scenes.length} Szene(n) aus den lokalen App-Dateien übernommen.` : ''),
-					)
-				}
-			}
-			this.scenes = scenes
-			this.sceneActive = {}
-			for (const s of this.scenes) {
-				this.sceneActive[String(s.ItemId)] = !!s.Active
-			}
-			// Neue, gelöschte, umbenannte oder verschobene Szenen: Definitionen neu aufbauen
-			const sig = scenesSignature(this.scenes)
-			if (sig !== this.scenesSig) {
-				this.scenesSig = sig
-				this.updateActions()
-				this.updateFeedbacks()
-				this.updateVariableDefinitions()
-				this.updatePresets()
-			}
-
+			await this.readScenes()
 			await this.readProgrammer()
 			await this.readDevices()
 
@@ -303,6 +289,44 @@ class VisionControlInstance extends InstanceBase {
 			this.checkFeedbacks('connected', 'network_status')
 			this.updateVariables()
 			throw e
+		}
+	}
+
+	/** Szenenliste lesen (API, sonst lokale Szenendateien) und bei Änderung Definitionen neu aufbauen */
+	async readScenes() {
+		const sres = await this.http('GET', '/Scenes', undefined, true)
+		let scenes = []
+		if (sres.ok) {
+			const data = await sres.json()
+			scenes = Array.isArray(data) ? data : []
+			this.scenesReadError = null
+		} else {
+			// Vision Control 2.17.3 und 2.18.4: GET /Scenes antwortet mit HTTP 500, auch wenn
+			// Szenen existieren. Rückfall: Namen aus den lokalen Szenendateien der App.
+			const useLocal = this.config.localScenes !== false
+			if (useLocal) scenes = readLocalScenes()
+			if (this.scenesReadError !== sres.status) {
+				this.scenesReadError = sres.status
+				this.log(
+					'warn',
+					`Szenenliste über die API nicht lesbar (HTTP ${sres.status}, Fehler der App).` +
+						(useLocal ? ` ${scenes.length} Szene(n) aus den lokalen App-Dateien übernommen.` : ''),
+				)
+			}
+		}
+		this.scenes = scenes
+		this.sceneActive = {}
+		for (const s of this.scenes) {
+			this.sceneActive[String(s.ItemId)] = !!s.Active
+		}
+		// Neue, gelöschte, umbenannte oder verschobene Szenen: Definitionen neu aufbauen
+		const sig = scenesSignature(this.scenes)
+		if (sig !== this.scenesSig) {
+			this.scenesSig = sig
+			this.updateActions()
+			this.updateFeedbacks()
+			this.updateVariableDefinitions()
+			this.updatePresets()
 		}
 	}
 

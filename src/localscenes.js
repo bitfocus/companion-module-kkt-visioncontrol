@@ -66,4 +66,34 @@ function readLocalScenes() {
 	return [...out.values()].sort((a, b) => a.ItemId - b.ItemId)
 }
 
-module.exports = { readLocalScenes }
+/**
+ * Beobachtet die Szenendateien der App und ruft onChange (entprellt) auf,
+ * sobald die App eine Szene anlegt, umbenennt oder löscht.
+ * @returns {() => void} beendet die Beobachtung
+ */
+function watchLocalScenes(onChange, debounceMs = 200) {
+	let timer = null
+	const watchers = []
+	for (const dir of findLocalStateDirs()) {
+		try {
+			watchers.push(
+				fs.watch(dir, (_event, file) => {
+					if (file && !FILES.includes(String(file))) return
+					if (timer) clearTimeout(timer)
+					timer = setTimeout(() => {
+						timer = null
+						onChange()
+					}, debounceMs)
+				}),
+			)
+		} catch {
+			// ohne Beobachtung bleibt die normale Abfrage
+		}
+	}
+	return () => {
+		if (timer) clearTimeout(timer)
+		for (const w of watchers) w.close()
+	}
+}
+
+module.exports = { readLocalScenes, watchLocalScenes }
