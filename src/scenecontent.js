@@ -8,17 +8,19 @@
 //   37–39  Rot, Grün, Blau – fest (StaticIQComponent) oder als Effekt
 //          (FxIQComponent: Schritte Item1 = Wert 0..255, Item2 = Stehzeit,
 //          Item3 = Überblendzeit, dazu Effect/Trigger/Repeat/TimeMultiplier)
-//   35     wird bewusst ignoriert: Startet die App selbst eine Szene, taucht der
-//          Wert nicht im Programmer auf (geprüft mit "White Line": 35 = 85 %,
-//          GET /Control zeigt nur Dimmer 100 % und den Farbeffekt).
+//   35     ersetzt den Dimmer nur, wenn Platz 4 fehlt. Ohne beides setzt die
+//          App den Dimmer auf 100 %. Abgleich mit dem Szenenstart in der App
+//          (GET /Control): "White Line" (4 = 100 %, 35 = 85 %) → 100 %,
+//          "Red Dot" (nur 35 = 100 %) → 100 %, "Test 35" (beide 100 %) → 100 %.
 // Andere Plätze sind noch nicht zugeordnet und werden übersprungen.
 
 const DIMMER = 4
 const RED = 37
 const GREEN = 38
 const BLUE = 39
-const IGNORED = 35
-const KNOWN = new Set([DIMMER, RED, GREEN, BLUE, IGNORED])
+const DIMMER_FALLBACK = 35
+const DIM_FULL = 65535
+const KNOWN = new Set([DIMMER, RED, GREEN, BLUE, DIMMER_FALLBACK])
 
 const byte = (v) => Math.max(0, Math.min(255, Math.round(Number(v) || 0)))
 const word = (v) => Math.max(0, Math.min(65535, Math.round(Number(v) || 0)))
@@ -95,11 +97,13 @@ function sceneToControl(scene) {
 			if (c && !KNOWN.has(idx)) skipped.add(idx)
 		})
 		const content = {}
-		const dim = comps[DIMMER]
-		if (dim && !isFx(dim)) content.MasterDimmer = { Default: false, Value: word(dim.Value), Fx: null }
-		else if (dim) skipped.add(DIMMER)
 		const rgb = rgbContent(comps[RED], comps[GREEN], comps[BLUE])
 		if (rgb) content.RGB = rgb
+		// Dimmer wie die App: Platz 4, sonst Platz 35, sonst voll
+		const dim = comps[DIMMER] || comps[DIMMER_FALLBACK]
+		if (dim && isFx(dim)) skipped.add(comps[DIMMER] ? DIMMER : DIMMER_FALLBACK)
+		else if (dim) content.MasterDimmer = { Default: false, Value: word(dim.Value), Fx: null }
+		else if (rgb) content.MasterDimmer = { Default: false, Value: DIM_FULL, Fx: null }
 		if (Object.keys(content).length) groups.push({ GroupID: gid, Content: content })
 	})
 	return { groups, fade: byte(scene && scene.Infade), skipped: [...skipped].sort((a, b) => a - b) }
