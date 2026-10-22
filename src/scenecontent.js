@@ -8,13 +8,17 @@
 //   37–39  Rot, Grün, Blau – fest (StaticIQComponent) oder als Effekt
 //          (FxIQComponent: Schritte Item1 = Wert 0..255, Item2 = Stehzeit,
 //          Item3 = Überblendzeit, dazu Effect/Trigger/Repeat/TimeMultiplier)
-// Andere Plätze (z. B. 35) sind noch nicht zugeordnet und werden übersprungen.
+//   35     wird bewusst ignoriert: Startet die App selbst eine Szene, taucht der
+//          Wert nicht im Programmer auf (geprüft mit "White Line": 35 = 85 %,
+//          GET /Control zeigt nur Dimmer 100 % und den Farbeffekt).
+// Andere Plätze sind noch nicht zugeordnet und werden übersprungen.
 
 const DIMMER = 4
 const RED = 37
 const GREEN = 38
 const BLUE = 39
-const KNOWN = new Set([DIMMER, RED, GREEN, BLUE])
+const IGNORED = 35
+const KNOWN = new Set([DIMMER, RED, GREEN, BLUE, IGNORED])
 
 const byte = (v) => Math.max(0, Math.min(255, Math.round(Number(v) || 0)))
 const word = (v) => Math.max(0, Math.min(65535, Math.round(Number(v) || 0)))
