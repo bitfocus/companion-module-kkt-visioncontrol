@@ -1,14 +1,14 @@
 {
 	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
 	"type": "connection",
-	"id": "visioncontrol",
-	"name": "visioncontrol",
+	"id": "kkt-visioncontrol",
+	"name": "kkt-visioncontrol",
 	"shortname": "Vision Control",
 	"description": "Steuert die Vision Control App (KKT Künzler Technologies) über ihre lokale REST-API: Szenen, Farben, Dimmer, Effekte und Sound-Trigger.",
 	"version": "1.0.0",
 	"license": "MIT",
-	"repository": "git+https://github.com/vt-koenig/companion-module-visioncontrol.git",
-	"bugs": "https://github.com/vt-koenig/companion-module-visioncontrol/issues",
+	"repository": "git+https://github.com/bitfocus/companion-module-kkt-visioncontrol.git",
+	"bugs": "https://github.com/bitfocus/companion-module-kkt-visioncontrol/issues",
 	"maintainers": [
 		{
 			"name": "Veranstaltungstechnik König",
@@ -24,8 +24,18 @@
 			"filesystem": true
 		}
 	},
-	"legacyIds": [],
+	"legacyIds": [
+		"visioncontrol"
+	],
 	"manufacturer": "KKT Künzler Technologies",
-	"products": ["Vision Control"],
-	"keywords": ["lighting", "dmx", "vision", "rest", "led"]
+	"products": [
+		"Vision Control"
+	],
+	"keywords": [
+		"lighting",
+		"dmx",
+		"vision",
+		"rest",
+		"led"
+	]
 }

@@ -1,4 +1,6 @@
-# companion-module-visioncontrol
+# companion-module-kkt-visioncontrol
+
+Offizielles Repository: [bitfocus/companion-module-kkt-visioncontrol](https://github.com/bitfocus/companion-module-kkt-visioncontrol)
 
 Ein [Bitfocus Companion](https://bitfocus.io/companion) Modul für die **Vision Control App** von KKT Künzler Technologies. Es steuert die App über ihre lokale REST-API: Farbe, Helligkeit, Effekte, Szenen und den Sound-Trigger.
 
@@ -18,17 +20,17 @@ Details zur Einrichtung stehen in [`companion/HELP.md`](companion/HELP.md).
 
 ## Entwicklung
 
-Das Modul nutzt `@companion-module/base` 1.12 und ist mit Companion 3.0 bis 4.3 kompatibel.
+Das Modul nutzt `@companion-module/base` 1.12 und läuft mit Companion 3.0 bis 5.1 (getestet mit 5.1.0). Modul-ID: `kkt-visioncontrol` (früher `visioncontrol`; Companion bietet bestehende Verbindungen zum Umstellen an).
 
-Abhängigkeiten installieren (Node 18, 20, 22 oder neuer):
+Abhängigkeiten installieren (Yarn 4 über Corepack, wie von Bitfocus vorgegeben):
 
 ```bash
-npm install
+npx corepack yarn install
 ```
 
 Zum lokalen Testen den Ordner als Developer-Modul in Companion einbinden:
 Launcher → Feld **Developer modules path** auf das übergeordnete Verzeichnis
-setzen (den Ordner, der `companion-module-visioncontrol` enthält), dann
+setzen (den Ordner, der diesen Modulordner enthält), dann
 Companion starten. Companion bringt seine eigene Node-Laufzeit mit; es genügt,
 dass `node_modules` im Modulordner vorhanden ist.
 
@@ -59,7 +61,7 @@ Die Glyphen stehen in `scripts/iconpack/glyphs.cjs`, das Layout in
 installierte App):
 
 ```bash
-npm run icons
+npx corepack yarn icons
 ```
 
 Das schreibt `icons/*.png` und bündelt sie in `src/icons.generated.json`.
@@ -69,7 +71,7 @@ etwa für Grafik-Programme oder die Dokumentation.
 Ein verteilbares Paket bauen (optional, benötigt die Build-Tools):
 
 ```bash
-npm run package
+npx corepack yarn package
 ```
 
 ## Lizenz
