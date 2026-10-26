@@ -7,9 +7,9 @@ const BLACK = combineRgb(0, 0, 0)
 const LOCAL_VARS = { local: true }
 
 /**
- * Button-Stil mit dem Bild des aktiven Effekts.
- * Katalog-Effekt/Farbe: deren Kachel. App-Effekt: Effektfarbe + Motiv-Ebene.
- * Aus: Mond-Symbol. Nichts aktiv: {} (Grundstil der Taste bleibt).
+ * Button style with the image of the active effect.
+ * Catalog effect/color: its tile. App effect: effect color + motif layer.
+ * Off: moon icon. Nothing active: {} (the button's base style remains).
  */
 function activeImageStyle(a) {
 	const textStyle = { color: combineRgb(255, 255, 255), alignment: 'center:bottom' }
@@ -37,16 +37,16 @@ function activeImageStyle(a) {
 }
 
 const TARGETS = [
-	{ id: 'group', label: 'Gruppe (GroupID)' },
+	{ id: 'group', label: 'Group (GroupID)' },
 	{ id: 'fixture', label: 'Fixture (RDMID)' },
 ]
 const ORANGE = combineRgb(255, 122, 0)
 const WHITE = combineRgb(255, 255, 255)
-// Farben für die Erreichbarkeit der App
+// Colors for the app's reachability
 const GREEN = combineRgb(0, 153, 51)
 const RED = combineRgb(204, 0, 0)
 
-// Balken zwischen Symbol (bis y 33) und Wert: orange gefüllt (wie der Aktiv-Rahmen), Rest dunkelgrau
+// Bar between icon (up to y 33) and value: filled orange (like the active frame), rest dark gray
 const BAR = { x: 8, y: 37, width: 56, height: 5 }
 function levelBar(fraction) {
 	const f = Math.max(0, Math.min(1, fraction || 0))
@@ -70,7 +70,7 @@ module.exports.activeImageStyle = activeImageStyle
 module.exports.levelBar = levelBar
 
 function UpdateFeedbacks(self) {
-	// Variablen im Kontext der Taste auflösen, inkl. lokaler Variablen
+	// Resolve variables in the button's context, incl. local variables
 	const parse = (context, text) =>
 		context && typeof context.parseVariablesInString === 'function'
 			? context.parseVariablesInString(String(text ?? ''))
@@ -78,7 +78,7 @@ function UpdateFeedbacks(self) {
 
 	self.setFeedbackDefinitions({
 		scene_active: {
-			name: 'Szene / Sequenz ist aktiv',
+			name: 'Scene / Sequence is active',
 			type: 'boolean',
 			defaultStyle: {
 				bgcolor: combineRgb(0, 153, 51),
@@ -88,7 +88,7 @@ function UpdateFeedbacks(self) {
 				{
 					id: 'itemId',
 					type: 'dropdown',
-					label: 'Szene / Sequenz',
+					label: 'Scene / Sequence',
 					default: sceneChoices(self.scenes)[0].id,
 					choices: sceneChoices(self.scenes),
 					allowCustom: true,
@@ -101,7 +101,7 @@ function UpdateFeedbacks(self) {
 		},
 
 		connected: {
-			name: 'Mit Vision Control verbunden',
+			name: 'Connected to Vision Control',
 			type: 'boolean',
 			defaultStyle: {
 				bgcolor: combineRgb(0, 102, 204),
@@ -114,13 +114,13 @@ function UpdateFeedbacks(self) {
 		},
 
 		effect_active: {
-			name: 'Katalog-Effekt ist aktiv',
-			description: 'Wahr, solange dieser Effekt auf dem Ziel läuft (auch mit überschriebenen Werten).',
+			name: 'Catalog effect is active',
+			description: 'True while this effect is running on the target (also with overridden values).',
 			type: 'boolean',
 			defaultStyle: { bgcolor: ORANGE, color: WHITE },
 			options: [
-				{ id: 'effect', type: 'dropdown', label: 'Effekt', default: CATALOG[0].id, choices: CATALOG.map((e) => ({ id: e.id, label: `${e.cat}: ${e.name}` })) },
-				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
+				{ id: 'effect', type: 'dropdown', label: 'Effect', default: CATALOG[0].id, choices: CATALOG.map((e) => ({ id: e.id, label: `${e.cat}: ${e.name}` })) },
+				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
 				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 			],
 			callback: async (feedback, context) => {
@@ -130,11 +130,11 @@ function UpdateFeedbacks(self) {
 		},
 
 		active_effect_image: {
-			name: 'Bild des aktiven Effekts',
-			description: 'Zeigt automatisch die Kachel des laufenden Effekts bzw. der laufenden Farbe.',
+			name: 'Image of the active effect',
+			description: 'Automatically shows the tile of the running effect or running color.',
 			type: 'advanced',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
+				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
 				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 			],
 			callback: async (feedback, context) => {
@@ -144,11 +144,11 @@ function UpdateFeedbacks(self) {
 		},
 
 		dimmer_level: {
-			name: 'Helligkeit als Balken',
-			description: 'Zeichnet die aktuelle Helligkeit als Balken, z. B. für den Drehregler am Stream Deck +.',
+			name: 'Brightness as a bar',
+			description: 'Draws the current brightness as a bar, e.g. for the rotary encoder on the Stream Deck +.',
 			type: 'advanced',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
+				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
 				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 			],
 			callback: async (feedback, context) => {
@@ -159,10 +159,10 @@ function UpdateFeedbacks(self) {
 		},
 
 		network_status: {
-			name: 'App erreichbar (grün / rot)',
+			name: 'App reachable (green / red)',
 			description:
-				'Grün: Die App antwortet und liefert die Geräteliste des Netzwerks. Rot: keine Verbindung zur App. ' +
-				'Ob einzelne Geräte eingeschaltet sind, meldet die API derzeit nicht.',
+				'Green: the app responds and provides the network device list. Red: no connection to the app. ' +
+				'The API currently does not report whether individual devices are switched on.',
 			type: 'advanced',
 			options: [],
 			callback: () => {
@@ -172,12 +172,12 @@ function UpdateFeedbacks(self) {
 		},
 
 		color_active: {
-			name: 'Farbe ist aktiv',
+			name: 'Color is active',
 			type: 'boolean',
 			defaultStyle: { bgcolor: ORANGE, color: WHITE },
 			options: [
-				{ id: 'color', type: 'dropdown', label: 'Farbe', default: COLORS[0].key, choices: COLORS.map((c) => ({ id: c.key, label: c.name })) },
-				{ id: 'target', type: 'dropdown', label: 'Ziel', default: 'group', choices: TARGETS },
+				{ id: 'color', type: 'dropdown', label: 'Color', default: COLORS[0].key, choices: COLORS.map((c) => ({ id: c.key, label: c.name })) },
+				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
 				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
 			],
 			callback: async (feedback, context) => {

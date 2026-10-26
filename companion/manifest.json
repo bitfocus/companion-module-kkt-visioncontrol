@@ -4,7 +4,7 @@
 	"id": "kkt-visioncontrol",
 	"name": "kkt-visioncontrol",
 	"shortname": "Vision Control",
-	"description": "Steuert die Vision Control App (KKT Künzler Technologies) über ihre lokale REST-API: Szenen, Farben, Dimmer, Effekte und Sound-Trigger.",
+	"description": "Controls the Vision Control app (KKT Künzler Technologies) through its local REST API: scenes, colors, dimmer, effects and sound trigger.",
 	"version": "1.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-kkt-visioncontrol.git",

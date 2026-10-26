@@ -13,7 +13,7 @@ const { labelText } = require('./labels')
 
 const REQUEST_TIMEOUT_MS = 5000
 const MAX_TRANSIENT_RETRIES = 3
-// Solange gilt ein Drehregler-Wert als aktuell, auch wenn die Abfrage noch den alten Stand liefert
+// How long a rotary encoder value counts as current, even if the poll still returns the old state
 const DIM_HOLD_MS = 2500
 const DIM_FULL = 65535
 
@@ -28,18 +28,18 @@ class VisionControlInstance extends InstanceBase {
 		this.sceneActive = {} // itemId -> bool
 		this.network = { Name: '', Identifier: '' }
 		this.pollTimer = null
-		this.programmer = null // letzter Stand aus GET /Control
-		this.lastSent = {} // 'group:0' -> { id, fp } zuletzt vom Modul gesendeter Katalog-Effekt
+		this.programmer = null // last state from GET /Control
+		this.lastSent = {} // 'group:0' -> { id, fp } catalog effect last sent by the module
 		this.refreshTimer = null
-		this.fastTimer = null // schnelle Abfrage nur des laufenden Zustands (GET /Control)
-		this.scenesSig = '' // Vergleichsschlüssel der Szenenliste
+		this.fastTimer = null // fast poll of the running state only (GET /Control)
+		this.scenesSig = '' // comparison key of the scene list
 		this.scenesReadError = null
-		this.devices = [] // Geräte des Netzwerks aus GET /Network/Info (auch ausgeschaltete)
+		this.devices = [] // network devices from GET /Network/Info (including switched-off ones)
 		this.devicesReadOk = false
-		this.dimPending = {} // 'group:0' -> { value, at } letzter Helligkeitswert vom Drehregler
-		this.dimSending = {} // 'group:0' -> true, solange ein Helligkeitsbefehl unterwegs ist
-		this.dimMemory = {} // 'group:0' -> Helligkeit vor dem Blackout
-		this.sceneApiBroken = false // Szenen-API der App verarbeitet keine Befehle (2.17.3/2.18.4)
+		this.dimPending = {} // 'group:0' -> { value, at } last brightness value from the rotary encoder
+		this.dimSending = {} // 'group:0' -> true while a brightness command is in flight
+		this.dimMemory = {} // 'group:0' -> brightness before the blackout
+		this.sceneApiBroken = false // the app's scene API does not process commands (2.17.3/2.18.4)
 	}
 
 	async init(config) {
@@ -84,35 +84,35 @@ class VisionControlInstance extends InstanceBase {
 				width: 12,
 				label: 'Vision Control',
 				value:
-					'Steuert die Vision Control App über ihre lokale REST-API. ' +
-					'Die API muss in der App aktiviert sein. Host, Port und Netzwerk-Passwort unten eintragen.',
+					'Controls the Vision Control app via its local REST API. ' +
+					'The API must be enabled in the app. Enter host, port and network password below.',
 			},
-			{ type: 'textinput', id: 'host', label: 'IP-Adresse der App', width: 6, default: '127.0.0.1', regex: Regex.IP },
+			{ type: 'textinput', id: 'host', label: 'IP address of the app', width: 6, default: '127.0.0.1', regex: Regex.IP },
 			{ type: 'textinput', id: 'port', label: 'Port', width: 3, default: '5123', regex: Regex.PORT },
-			{ type: 'textinput', id: 'password', label: 'Netzwerk-Passwort', width: 6 },
-			{ type: 'number', id: 'poll', label: 'Abfrage-Intervall Szenen / Geräte (ms)', width: 3, default: 1000, min: 500, max: 60000 },
+			{ type: 'textinput', id: 'password', label: 'Network password', width: 6 },
+			{ type: 'number', id: 'poll', label: 'Poll interval scenes / devices (ms)', width: 3, default: 1000, min: 500, max: 60000 },
 			{
 				type: 'number',
 				id: 'fastPoll',
-				label: 'Abfrage Helligkeit / laufender Effekt (ms, 0 = aus)',
-				tooltip: 'Liest nur den laufenden Zustand (GET /Control), damit Anzeigen Änderungen aus der App schnell übernehmen.',
+				label: 'Poll brightness / running effect (ms, 0 = off)',
+				tooltip: 'Reads only the running state (GET /Control) so displays pick up changes made in the app quickly.',
 				width: 4,
 				default: 500,
 				min: 0,
 				max: 10000,
 			},
-			{ type: 'textinput', id: 'statusGroup', label: 'Gruppe für Statusanzeige (GroupID)', width: 4, default: '0' },
+			{ type: 'textinput', id: 'statusGroup', label: 'Group for status display (GroupID)', width: 4, default: '0' },
 			{
 				type: 'checkbox',
 				id: 'localScenes',
-				label: 'Szenennamen aus den lokalen App-Dateien lesen, falls die API sie nicht liefert (nur wenn Companion auf demselben PC läuft)',
+				label: "Read scene names from the app's local scene files if the API does not provide them (only when Companion runs on the same PC)",
 				width: 12,
 				default: true,
 			},
 		]
 	}
 
-	// ---- Verbindung / Polling -------------------------------------------------
+	// ---- Connection / polling -------------------------------------------------
 
 	baseUrl() {
 		return `http://${this.config.host}:${this.config.port || 5123}`
@@ -129,22 +129,22 @@ class VisionControlInstance extends InstanceBase {
 		}
 		this.stopSceneWatch()
 		if (!this.config.host) {
-			this.updateStatus(InstanceStatus.BadConfig, 'Keine IP-Adresse gesetzt')
+			this.updateStatus(InstanceStatus.BadConfig, 'No IP address set')
 			return
 		}
 		this.updateStatus(InstanceStatus.Connecting)
 		this.token = null
-		this.sceneApiBroken = false // nach Neuverbindung (evtl. neue App-Version) wieder zuerst die API versuchen
-		// Die Abfrage läuft immer, auch wenn die App beim Start nicht erreichbar ist
-		// (z. B. nach einem App-Update mit noch abgeschalteter API). Sonst bliebe das
-		// Modul "offline", obwohl Befehle längst wieder funktionieren.
+		this.sceneApiBroken = false // after reconnecting (possibly a new app version) try the API first again
+		// Polling always runs, even if the app is not reachable at startup
+		// (e.g. after an app update with the API still disabled). Otherwise the
+		// module would stay "offline" although commands have long been working again.
 		const interval = Math.max(500, Number(this.config.poll) || 1000)
 		this.pollTimer = setInterval(() => this.pollSafe(), interval)
-		// Helligkeit und laufender Effekt ändern sich oft (auch in der App) – diese
-		// kleine Abfrage läuft schneller als die große mit Szenen und Geräten.
+		// Brightness and running effect change often (also in the app) – this
+		// small poll runs faster than the big one with scenes and devices.
 		const fast = Number(this.config.fastPoll ?? 500)
 		if (fast > 0) this.fastTimer = setInterval(() => this.refreshProgrammer(), Math.max(200, fast))
-		// Szenen aus der App sofort übernehmen, statt auf die nächste Abfrage zu warten
+		// Pick up scenes from the app immediately instead of waiting for the next poll
 		if (this.config.localScenes !== false) this.sceneWatchStop = watchLocalScenes(() => this.refreshScenes())
 		await this.pollSafe()
 	}
@@ -154,18 +154,18 @@ class VisionControlInstance extends InstanceBase {
 		this.sceneWatchStop = null
 	}
 
-	/** Szenen neu lesen, wenn die App ihre Szenendateien geändert hat */
+	/** Re-read scenes when the app has changed its scene files */
 	async refreshScenes() {
 		try {
 			await this.readScenes()
 			this.checkFeedbacks('scene_active')
 			this.updateVariables()
 		} catch (e) {
-			this.log('debug', `Szenen-Aktualisierung fehlgeschlagen: ${e.message || e}`)
+			this.log('debug', `Scene refresh failed: ${e.message || e}`)
 		}
 	}
 
-	/** Nur den laufenden Zustand lesen und Anzeigen aktualisieren, ohne Überlappung */
+	/** Read only the running state and update displays, without overlap */
 	async refreshProgrammer() {
 		if (!this.connected || this.polling || this.programmerBusy) return
 		this.programmerBusy = true
@@ -174,23 +174,23 @@ class VisionControlInstance extends InstanceBase {
 			this.checkFeedbacks('effect_active', 'color_active', 'active_effect_image', 'dimmer_level')
 			this.updateVariables()
 		} catch (e) {
-			this.log('debug', `Schnelle Abfrage fehlgeschlagen: ${e.message || e}`)
+			this.log('debug', `Fast poll failed: ${e.message || e}`)
 		} finally {
 			this.programmerBusy = false
 		}
 	}
 
-	/** Eine Abfrage ohne Überlappung; Fehler nur beim Wechsel des Fehlertexts loggen */
+	/** One poll without overlap; log errors only when the error text changes */
 	async pollSafe() {
 		if (this.polling) return
 		this.polling = true
 		try {
 			await this.poll()
-			if (this.lastPollError) this.log('info', 'Verbindung zur App wiederhergestellt')
+			if (this.lastPollError) this.log('info', 'Connection to the app restored')
 			this.lastPollError = null
 		} catch (e) {
 			const msg = String(e.message || e)
-			if (msg !== this.lastPollError) this.log('error', `Verbindung fehlgeschlagen: ${msg}`)
+			if (msg !== this.lastPollError) this.log('error', `Connection failed: ${msg}`)
 			this.lastPollError = msg
 		} finally {
 			this.polling = false
@@ -202,9 +202,9 @@ class VisionControlInstance extends InstanceBase {
 		if (!res.ok) {
 			this.token = null
 			if (res.status === 503 || res.status === 401) {
-				throw new Error('Falsches oder fehlendes Netzwerk-Passwort')
+				throw new Error('Wrong or missing network password')
 			}
-			throw new Error(`Anmeldung fehlgeschlagen (HTTP ${res.status})`)
+			throw new Error(`Authentication failed (HTTP ${res.status})`)
 		}
 		const data = await res.json()
 		this.token = data.access_token
@@ -214,7 +214,7 @@ class VisionControlInstance extends InstanceBase {
 	}
 
 	async ensureToken() {
-		// 30 s Puffer vor Ablauf
+		// 30 s buffer before expiry
 		if (!this.token || Date.now() > this.tokenExpiresAt - 30000) {
 			await this.authenticate()
 		}
@@ -222,8 +222,8 @@ class VisionControlInstance extends InstanceBase {
 	}
 
 	/**
-	 * Low-level HTTP-Request.
-	 * @param {boolean} auth  true = Bearer-Token anhängen und bei 401 einmal neu anmelden
+	 * Low-level HTTP request.
+	 * @param {boolean} auth  true = attach bearer token and re-authenticate once on 401
 	 */
 	async http(method, path, body, auth = true, _retried = false, _attempt = 0) {
 		const headers = {}
@@ -253,17 +253,17 @@ class VisionControlInstance extends InstanceBase {
 			return this.http(method, path, body, auth, true, _attempt)
 		}
 
-		// Vision Control hat einen sporadischen Threading-Bug: Der API-Handler
-		// aktualisiert die Oberfläche aus einem Hintergrund-Thread und antwortet
-		// dann mit einer COMException (0x8001010E, RPC_E_WRONG_THREAD).
-		// Steuerbefehle sind idempotent, daher kurz warten und wiederholen.
+		// Vision Control has a sporadic threading bug: the API handler
+		// updates the UI from a background thread and then responds
+		// with a COMException (0x8001010E, RPC_E_WRONG_THREAD).
+		// Control commands are idempotent, so wait briefly and retry.
 		if (!res.ok && _attempt < MAX_TRANSIENT_RETRIES) {
 			const text = await res
 				.clone()
 				.text()
 				.catch(() => '')
 			if (text.includes('COMException') || text.includes('0x8001010E')) {
-				this.log('debug', `Transienter App-Fehler bei ${method} ${path}, Wiederholung ${_attempt + 1}`)
+				this.log('debug', `Transient app error on ${method} ${path}, retry ${_attempt + 1}`)
 				await new Promise((r) => setTimeout(r, 150 * (_attempt + 1)))
 				return this.http(method, path, body, auth, _retried, _attempt + 1)
 			}
@@ -295,7 +295,7 @@ class VisionControlInstance extends InstanceBase {
 		}
 	}
 
-	/** Szenenliste lesen (API, sonst lokale Szenendateien) und bei Änderung Definitionen neu aufbauen */
+	/** Read the scene list (API, otherwise local scene files) and rebuild definitions on change */
 	async readScenes() {
 		const sres = await this.http('GET', '/Scenes', undefined, true)
 		let scenes = []
@@ -304,22 +304,22 @@ class VisionControlInstance extends InstanceBase {
 			scenes = Array.isArray(data) ? data : []
 			this.scenesReadError = null
 		} else {
-			// Vision Control 2.17.3 und 2.18.4: GET /Scenes antwortet mit HTTP 500, auch wenn
-			// Szenen existieren. Rückfall: Namen aus den lokalen Szenendateien der App.
+			// Vision Control 2.17.3 and 2.18.4: GET /Scenes responds with HTTP 500 even if
+			// scenes exist. Fallback: names from the app's local scene files.
 			const useLocal = this.config.localScenes !== false
 			if (useLocal) scenes = readLocalScenes()
 			if (this.scenesReadError !== sres.status) {
 				this.scenesReadError = sres.status
 				this.log(
 					'warn',
-					`Szenenliste über die API nicht lesbar (HTTP ${sres.status}, Fehler der App).` +
-						(useLocal ? ` ${scenes.length} Szene(n) aus den lokalen App-Dateien übernommen.` : ''),
+					`Scene list not readable via the API (HTTP ${sres.status}, app error).` +
+						(useLocal ? ` ${scenes.length} scene(s) taken from the app's local scene files.` : ''),
 				)
 			}
 		}
 		this.scenes = scenes
 		this.updateSceneActive()
-		// Neue, gelöschte, umbenannte oder verschobene Szenen: Definitionen neu aufbauen
+		// New, deleted, renamed or moved scenes: rebuild definitions
 		const sig = scenesSignature(this.scenes)
 		if (sig !== this.scenesSig) {
 			this.scenesSig = sig
@@ -335,7 +335,7 @@ class VisionControlInstance extends InstanceBase {
 		const sceneVars = {}
 		for (const s of this.scenes || []) {
 			sceneVars[`scene_${s.ItemId}_name`] = sceneName(s)
-			// Für Tasten: in Schriftgröße 14 umbrochen, passt unter das Symbol
+			// For buttons: wrapped at font size 14, fits below the icon
 			sceneVars[`scene_${s.ItemId}_label`] = labelText(sceneName(s), 14, 36).text
 			sceneVars[`scene_${s.ItemId}_active`] = s.Active ? 'true' : 'false'
 		}
@@ -344,7 +344,7 @@ class VisionControlInstance extends InstanceBase {
 			...sceneVars,
 			network_devices: String(net.count),
 			network_device_names: net.names.length ? net.names.join(', ') : '–',
-			app_reachable: net.level === 'ok' ? 'ja' : 'nein',
+			app_reachable: net.level === 'ok' ? 'yes' : 'no',
 			connection: this.connected ? 'connected' : 'disconnected',
 			network_name: (this.network && this.network.Name) || '',
 			network_id: (this.network && this.network.Identifier) || '',
@@ -352,15 +352,15 @@ class VisionControlInstance extends InstanceBase {
 			active_effect: a.name,
 			active_effect_id: a.id || '',
 			active_category: a.category,
-			active_seconds: a.seconds === null ? '' : `${a.seconds.toFixed(2).replace('.', ',')} s`,
+			active_seconds: a.seconds === null ? '' : `${a.seconds.toFixed(2)} s`,
 			active_dimmer: a.dimmerPct === null ? '' : `${a.dimmerPct} %`,
 			active_range: a.range === null ? '' : String(a.range),
 		})
 	}
 
-	// ---- Netzwerk-Geräte und Erreichbarkeit der App ---------------------------
-	// Hinweis: /Network/Info enthält auch ausgeschaltete Geräte; einen
-	// Online-Status pro Gerät liefert die API derzeit nicht.
+	// ---- Network devices and app reachability --------------------------------
+	// Note: /Network/Info also contains switched-off devices; the API currently
+	// does not provide a per-device online status.
 
 	async readDevices() {
 		const res = await this.http('GET', '/Network/Info', undefined, true)
@@ -377,7 +377,7 @@ class VisionControlInstance extends InstanceBase {
 		return networkStatus({ connected: this.connected, readOk: this.devicesReadOk, current: this.devices })
 	}
 
-	// ---- Aktiver Effekt -------------------------------------------------------
+	// ---- Active effect --------------------------------------------------------
 
 	async readProgrammer() {
 		const res = await this.http('GET', '/Control', undefined, true)
@@ -389,18 +389,18 @@ class VisionControlInstance extends InstanceBase {
 		return this.programmer
 	}
 
-	/** Was läuft gerade auf Gruppe/Fixture? (aus dem zuletzt gelesenen Stand) */
+	/** What is currently running on the group/fixture? (from the last read state) */
 	activeFor(target, id) {
 		return describeActive(findContent(this.programmer, target, id), this.lastSent[`${target}:${id}`])
 	}
 
-	/** Vom Modul gesendeten Katalog-Effekt merken, damit er auch mit Überschreibungen erkannt wird */
+	/** Remember the catalog effect sent by the module so it is recognized even with overrides */
 	markSent(target, id, catalogId, entry) {
 		this.lastSent[`${target}:${id}`] = { id: catalogId, fp: fingerprintOfEntry(entry) }
 		this.scheduleRefresh()
 	}
 
-	/** Programmer kurz nach einer Änderung neu lesen, damit Feedbacks sofort stimmen */
+	/** Re-read the programmer shortly after a change so feedbacks are correct right away */
 	scheduleRefresh(delay = 250) {
 		if (this.refreshTimer) clearTimeout(this.refreshTimer)
 		this.refreshTimer = setTimeout(async () => {
@@ -410,17 +410,17 @@ class VisionControlInstance extends InstanceBase {
 				this.checkFeedbacks('effect_active', 'color_active', 'active_effect_image', 'dimmer_level')
 				this.updateVariables()
 			} catch (e) {
-				this.log('debug', `Aktualisierung fehlgeschlagen: ${e.message || e}`)
+				this.log('debug', `Refresh failed: ${e.message || e}`)
 			}
 		}, delay)
 	}
 
-	/** Laufenden Effekt anpassen: faster, slower, brighter, darker, range_up, range_down */
+	/** Adjust the running effect: faster, slower, brighter, darker, range_up, range_down */
 	async adjustActive(target, id, what, percent, rangeStep) {
 		await this.readProgrammer()
 		const partial = adjustContent(findContent(this.programmer, target, id), what, percent, rangeStep)
 		if (!partial) {
-			this.log('warn', `Anpassen "${what}" nicht möglich: Auf ${target} ${id} läuft kein passender Effekt.`)
+			this.log('warn', `Cannot adjust "${what}": no matching effect is running on ${target} ${id}.`)
 			return
 		}
 		await this.setControl(target, id, partial, 0)
@@ -428,11 +428,11 @@ class VisionControlInstance extends InstanceBase {
 	}
 
 	/**
-	 * Aktiv-Status der Szenen. Von der API gelesene Szenen bringen ihn mit; lokal
-	 * gelesene werden am laufenden Zustand erkannt (gleiche Farbe bzw. gleicher
-	 * Farbeffekt im Programmer). So erlischt eine Szene, sobald ein anderes
-	 * Preset oder die App etwas anderes setzt, und in der App gestartete Szenen
-	 * leuchten ebenfalls.
+	 * Active state of the scenes. Scenes read from the API carry it; locally
+	 * read ones are recognized from the running state (same color or same
+	 * color effect in the programmer). This way a scene goes dark as soon as another
+	 * preset or the app sets something else, and scenes started in the app
+	 * light up as well.
 	 */
 	updateSceneActive() {
 		const next = {}
@@ -444,15 +444,15 @@ class VisionControlInstance extends InstanceBase {
 		if (changed) this.checkFeedbacks('scene_active')
 	}
 
-	// ---- Szenen schalten -------------------------------------------------------
+	// ---- Switching scenes ------------------------------------------------------
 
 	/**
-	 * Szene an/aus. Zuerst über die Szenen-API; verarbeitet die App sie nicht
-	 * (2.17.3/2.18.4), wird die gespeicherte Szene aus den lokalen Szenendateien
-	 * über POST /Control nachgebildet.
+	 * Scene on/off. First via the scene API; if the app does not process it
+	 * (2.17.3/2.18.4), the saved scene from the local scene files is
+	 * recreated via POST /Control.
 	 */
 	async switchScene(id, on) {
-		const what = on ? 'Szene An' : 'Szene Aus'
+		const what = on ? 'Scene On' : 'Scene Off'
 		if (!this.sceneApiBroken) {
 			const res = await this.http('POST', `/Scenes/${encodeURIComponent(id)}/${on ? 'On' : 'Off'}`)
 			try {
@@ -461,27 +461,27 @@ class VisionControlInstance extends InstanceBase {
 			} catch (e) {
 				if (this.config.localScenes === false) throw e
 				this.sceneApiBroken = true
-				this.log('info', `${what} über die API nicht möglich (${e.message}). Ersatzweg: Szene aus den lokalen App-Dateien über /Control.`)
+				this.log('info', `${what} not possible via the API (${e.message}). Fallback: scene from the app's local scene files via /Control.`)
 			}
 		}
 		const scene = this.config.localScenes === false ? null : readLocalSceneDetail(id)
-		if (!scene) throw new Error(`${what}: Szene ${id} nicht in den lokalen App-Dateien gefunden (Companion muss auf dem PC der App laufen).`)
+		if (!scene) throw new Error(`${what}: scene ${id} not found in the app's local scene files (Companion must run on the app's PC).`)
 		const plan = on ? sceneToControl(scene) : sceneOffControl(scene)
-		if (!plan.groups.length) throw new Error(`${what}: Szene "${scene.Name}" enthält keine übertragbaren Werte.`)
+		if (!plan.groups.length) throw new Error(`${what}: scene "${scene.Name}" contains no transferable values.`)
 		if (on && plan.skipped && plan.skipped.length) {
-			this.log('debug', `Szene "${scene.Name}": Komponenten ${plan.skipped.join(', ')} noch nicht unterstützt, übersprungen.`)
+			this.log('debug', `Scene "${scene.Name}": components ${plan.skipped.join(', ')} not supported yet, skipped.`)
 		}
 		const res = await this.http('POST', '/Control', { FadeTime: plan.fade, Fixtures: [], Groups: plan.groups })
 		await this.expectHandled(res, what)
-		// Status gleich am echten Zustand der App prüfen
+		// Check the status right away against the app's actual state
 		await this.readProgrammer()
 		this.checkFeedbacks('effect_active', 'color_active', 'active_effect_image', 'dimmer_level')
 		this.updateVariables()
 	}
 
-	// ---- Helligkeit per Drehregler -------------------------------------------
+	// ---- Brightness via rotary encoder ----------------------------------------
 
-	/** Aktuelle Helligkeit 0..65535: frischer Drehregler-Wert, sonst der zuletzt gelesene Stand */
+	/** Current brightness 0..65535: fresh rotary encoder value, otherwise the last read state */
 	dimmerNow(target, id) {
 		const p = this.dimPending[`${target}:${id}`]
 		if (p && Date.now() - p.at < DIM_HOLD_MS) return p.value
@@ -489,7 +489,7 @@ class VisionControlInstance extends InstanceBase {
 		return c && c.MasterDimmer && typeof c.MasterDimmer.Value === 'number' ? c.MasterDimmer.Value : DIM_FULL
 	}
 
-	/** Frische Drehregler-Werte in den gelesenen Stand eintragen, damit Anzeige und Feedbacks nicht zurückspringen */
+	/** Write fresh rotary encoder values into the read state so displays and feedbacks do not jump back */
 	applyPendingDimmer() {
 		for (const [key, p] of Object.entries(this.dimPending)) {
 			if (Date.now() - p.at >= DIM_HOLD_MS) continue
@@ -499,13 +499,13 @@ class VisionControlInstance extends InstanceBase {
 		}
 	}
 
-	/** Helligkeit um stepPct Prozentpunkte ändern (positiv = heller) */
+	/** Change brightness by stepPct percentage points (positive = brighter) */
 	async stepDimmer(target, id, stepPct) {
 		const value = this.dimmerNow(target, id) + Math.round((stepPct / 100) * DIM_FULL)
 		await this.setDimmerQueued(target, id, value, 0)
 	}
 
-	/** Blackout an/aus: merkt sich die Helligkeit davor und stellt sie wieder her */
+	/** Blackout on/off: remembers the brightness before and restores it */
 	async toggleBlackout(target, id, fade) {
 		const key = `${target}:${id}`
 		const cur = this.dimmerNow(target, id)
@@ -518,10 +518,10 @@ class VisionControlInstance extends InstanceBase {
 	}
 
 	/**
-	 * Setzt die Helligkeit. Schnelle Drehregler-Schritte werden zusammengefasst:
-	 * Läuft schon ein Befehl, wird danach nur der neueste Wert gesendet.
+	 * Sets the brightness. Fast rotary encoder steps are combined:
+	 * if a command is already running, only the newest value is sent afterwards.
 	 */
-	/** Neue Helligkeit sofort anzeigen, bevor die App sie bestätigt */
+	/** Show the new brightness immediately, before the app confirms it */
 	noteDimmer(target, id, value) {
 		const v = Math.max(0, Math.min(DIM_FULL, Math.round(value)))
 		this.dimPending[`${target}:${id}`] = { value: v, at: Date.now() }
@@ -548,12 +548,12 @@ class VisionControlInstance extends InstanceBase {
 		}
 	}
 
-	// ---- Steuer-Helfer --------------------------------------------------------
+	// ---- Control helpers ------------------------------------------------------
 
 	/**
-	 * Prüft, ob die App einen Befehl wirklich verarbeitet hat. Unbekannte Routen
-	 * beantwortet sie mit HTTP 200 und ihrer Doku-Seite, das wäre sonst ein
-	 * stiller Scheinerfolg.
+	 * Checks whether the app really processed a command. It answers unknown routes
+	 * with HTTP 200 and its documentation page, which would otherwise be a
+	 * silent fake success.
 	 */
 	async expectHandled(res, what) {
 		const text = await res
@@ -561,20 +561,20 @@ class VisionControlInstance extends InstanceBase {
 			.text()
 			.catch(() => '')
 		if (res.ok && !text.includes('<title>API Documentation')) return text
-		if (res.ok) throw new Error(`${what}: Die App hat den Befehl nicht verarbeitet (in dieser App-Version nicht verfügbar).`)
-		throw new Error(`${what} fehlgeschlagen (HTTP ${res.status}) ${text.replace(/\s+/g, ' ').slice(0, 120)}`)
+		if (res.ok) throw new Error(`${what}: the app did not process the command (not available in this app version).`)
+		throw new Error(`${what} failed (HTTP ${res.status}) ${text.replace(/\s+/g, ' ').slice(0, 120)}`)
 	}
 
 	/**
-	 * Setzt ProgrammerContent auf eine Gruppe oder ein Fixture via POST /Control.
+	 * Sets ProgrammerContent on a group or a fixture via POST /Control.
 	 * @param {'group'|'fixture'} target
-	 * @param {number} id        GroupID oder RDMID
-	 * @param {object} content   ProgrammerContent (nur benötigte Felder)
-	 * @param {number|null} fade FadeTime 0..255 oder null
+	 * @param {number} id        GroupID or RDMID
+	 * @param {object} content   ProgrammerContent (only required fields)
+	 * @param {number|null} fade FadeTime 0..255 or null
 	 */
 	async setControl(target, id, content, fade) {
-		// FadeTime ist eine Ganzzahl 0..255 und darf NICHT null sein (die API
-		// antwortet sonst mit HTTP 400). 0 = sofort.
+		// FadeTime is an integer 0..255 and must NOT be null (otherwise the API
+		// responds with HTTP 400). 0 = instant.
 		const fadeByte = Math.max(0, Math.min(255, Math.round(Number(fade) || 0)))
 		const body = {
 			FadeTime: fadeByte,
@@ -587,12 +587,12 @@ class VisionControlInstance extends InstanceBase {
 			body.Groups.push({ GroupID: id, Content: content })
 		}
 		const res = await this.http('POST', '/Control', body)
-		await this.expectHandled(res, 'Steuerbefehl')
-		// Gleich zurücklesen, damit Anzeigen nicht auf die nächste Abfrage warten
+		await this.expectHandled(res, 'Control command')
+		// Read back right away so displays do not wait for the next poll
 		this.scheduleRefresh(150)
 	}
 
-	// ---- Definitionen laden ---------------------------------------------------
+	// ---- Load definitions -----------------------------------------------------
 
 	updateActions() {
 		UpdateActions(this)

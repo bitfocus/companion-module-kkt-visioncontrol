@@ -1,19 +1,19 @@
-// Erkennt den aktiven Effekt aus dem zurückgelesenen Programmer (GET /Control)
-// und berechnet Anpassungen (Tempo, Helligkeit, Range) des laufenden Effekts.
-// Reine Funktionen ohne Companion-Abhängigkeit, damit sie testbar sind.
+// Detects the active effect from the programmer read back (GET /Control)
+// and calculates adjustments (speed, brightness, range) of the running effect.
+// Pure functions without a Companion dependency, so they are testable.
 
 const { CATALOG, CATALOG_BY_ID, COLORS } = require('./effects-data')
 const { fingerprint, fingerprintOfFx, fxFromReadback, secondsOfFx } = require('./fx')
 
 const CATALOG_BY_FP = new Map(CATALOG.map((e) => [fingerprint(e.effect, e.geometry || 0, e.colors), e.id]))
 
-// Kurze Musternamen je EffectType für Effekte, die nicht aus dem Katalog stammen
+// Short pattern names per EffectType for effects that do not come from the catalog
 const PATTERN_NAMES = [
-	'Farbfolge', 'Rad', 'Teilung', 'Teilung', 'Wand', 'Wand', 'Wand', 'Wand', 'Pfeil', 'Pfeil', 'Pfeil', 'Pfeil',
-	'Quadrat', 'Ringe', 'Rauschen', 'Schlange', 'Schlange', 'Regen', 'Regen', 'Schach', 'Pixel',
+	'Color cycle', 'Wheel', 'Split', 'Split', 'Wall', 'Wall', 'Wall', 'Wall', 'Arrow', 'Arrow', 'Arrow', 'Arrow',
+	'Square', 'Rings', 'Noise', 'Snake', 'Snake', 'Rain', 'Rain', 'Chess', 'Pixels',
 ]
 
-/** Inhalt (Content) einer Gruppe bzw. eines Fixtures aus GET /Control */
+/** Content of a group or fixture from GET /Control */
 function findContent(programmer, target, id) {
 	if (!programmer) return null
 	const list = target === 'fixture' ? programmer.Fixtures : programmer.Groups
@@ -22,19 +22,19 @@ function findContent(programmer, target, id) {
 	return hit ? hit.Content : null
 }
 
-/** Fingerabdruck eines vom Modul gesendeten Eintrags */
+/** Fingerprint of an entry sent by the module */
 function fingerprintOfEntry(entry) {
 	return fingerprint(entry.effect, entry.geometry || 0, entry.colors)
 }
 
 /**
- * Beschreibt, was gerade läuft.
- * @param {object|null} content   Content aus GET /Control
- * @param {{id:string, fp:string}|undefined} lastSent  zuletzt vom Modul gesendet
+ * Describes what is currently running.
+ * @param {object|null} content   Content from GET /Control
+ * @param {{id:string, fp:string}|undefined} lastSent  last sent by the module
  */
 function describeActive(content, lastSent) {
-	// effect/colors: bei laufendem Fx; rgb: bei statischer Farbe (jeweils 8-bit)
-	const out = { id: null, name: 'Nichts aktiv', category: '', seconds: null, dimmerPct: null, range: null, effect: null, colors: null, rgb: null }
+	// effect/colors: for a running Fx; rgb: for a static color (each 8-bit)
+	const out = { id: null, name: 'Nothing active', category: '', seconds: null, dimmerPct: null, range: null, effect: null, colors: null, rgb: null }
 	if (!content) return out
 	const dim = content.MasterDimmer && typeof content.MasterDimmer.Value === 'number' ? content.MasterDimmer.Value : null
 	if (dim !== null) out.dimmerPct = Math.round((dim / 65535) * 100)
@@ -46,7 +46,7 @@ function describeActive(content, lastSent) {
 		const entry = id ? CATALOG_BY_ID[id] : null
 		const f = fxFromReadback(rgb.Fx)
 		out.id = entry ? entry.id : 'custom'
-		out.name = entry ? entry.name : PATTERN_NAMES[f.Effect.Value] || 'Effekt'
+		out.name = entry ? entry.name : PATTERN_NAMES[f.Effect.Value] || 'Effect'
 		out.category = entry ? entry.cat : 'App'
 		out.seconds = Math.round(secondsOfFx(rgb.Fx) * 100) / 100
 		out.range = f.Effect.Range
@@ -57,19 +57,19 @@ function describeActive(content, lastSent) {
 		out.rgb = v.map((x) => Math.round(x / 257))
 		const col = COLORS.find((c) => c.rgb.every((x, i) => Math.abs(x * 257 - v[i]) <= 400))
 		out.id = col ? `color:${col.key}` : 'color'
-		out.name = col ? `Farbe ${col.name}` : 'Farbe'
-		out.category = 'Farben'
+		out.name = col ? `Color ${col.name}` : 'Color'
+		out.category = 'Colors'
 	}
 	if (out.dimmerPct === 0) {
 		out.id = 'off'
-		out.name = 'Aus'
+		out.name = 'Off'
 	}
 	return out
 }
 
 /**
- * Berechnet einen Teil-Content zum Anpassen des laufenden Effekts.
- * @returns {object|null} Content für POST /Control oder null, wenn nicht möglich
+ * Calculates a partial content for adjusting the running effect.
+ * @returns {object|null} Content for POST /Control, or null if not possible
  */
 function adjustContent(content, what, percent = 20, rangeStep = 5) {
 	if (!content) return null
@@ -93,7 +93,7 @@ function adjustContent(content, what, percent = 20, rangeStep = 5) {
 		if (tm >= 1 && tm <= 255) {
 			fx.TimeMultiplier = tm
 		} else {
-			// Zeitfaktor am Anschlag: stattdessen die Schrittzeiten skalieren
+			// Time multiplier at its limit: scale the step times instead
 			fx.TimeMultiplier = Math.max(1, Math.min(255, tm))
 			for (const s of fx.FxScenes) {
 				s.StayTime = Math.max(0, Math.min(255, Math.round(s.StayTime * factor)))

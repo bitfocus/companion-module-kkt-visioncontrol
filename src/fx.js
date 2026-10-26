@@ -1,12 +1,12 @@
-// Baut ProgrammerContent für einen RGB-Effekt aus einem Katalog- oder
-// Benutzereintrag. Enums werden als Zahl gesendet (die API verlangt das).
+// Builds ProgrammerContent for an RGB effect from a catalog or
+// user entry. Enums are sent as numbers (the API requires this).
 //
-// Zeitmodell (per Kamera gemessen): Dauer je Farbschritt
+// Timing model (measured with a camera): duration per color step
 //   ≈ (StayTime + FadeTime) × TimeMultiplier × 10 ms.
-// Ein höherer TimeMultiplier ist also LANGSAMER, 0 lässt den Effekt stehen.
+// A higher TimeMultiplier is therefore SLOWER, 0 freezes the effect.
 //
-// Range verteilt Muster-Effekte über die Pixel. Bei 0 haben alle Pixel dieselbe
-// Phase (sieht aus wie eine einfache Farbfolge). Die App-Vorlagen nutzen 10.
+// Range spreads pattern effects across the pixels. At 0 all pixels share the same
+// phase (looks like a simple color cycle). The app templates use 10.
 
 const UNIT_MS = 10
 const DEFAULT_RANGE = 10
@@ -15,8 +15,8 @@ const pct16 = (p) => Math.round((Math.max(0, Math.min(100, Number(p))) / 100) * 
 const byte = (v, d = 0) => Math.max(0, Math.min(255, Math.round(Number(v ?? d) || 0)))
 
 /**
- * Rechnet Sekunden pro Farbschritt und Weichheit (0..1 = Anteil Überblendung)
- * in StayTime, FadeTime und TimeMultiplier um.
+ * Converts seconds per color step and softness (0..1 = fade share)
+ * into StayTime, FadeTime and TimeMultiplier.
  */
 function timing(sec, soft = 0.5) {
 	const s = Math.max(0.02, Number(sec) || 1)
@@ -43,7 +43,7 @@ function timing(sec, soft = 0.5) {
 
 /**
  * @param {object} e  { colors:[[r,g,b],...], effect, geometry, sec, soft
- *                      (oder step, fade, speed), range, variation, bounce,
+ *                      (or step, fade, speed), range, variation, bounce,
  *                      reverse, dimmer, trigger:{...} }
  */
 function buildEffectContent(e) {
@@ -85,15 +85,15 @@ function buildEffectContent(e) {
 					adaptBPMTime: !!t.adaptBpm,
 				},
 				Repeat: 255,
-				// Nie 0: dann bleibt der Effekt stehen
+				// Never 0: that would freeze the effect
 				TimeMultiplier: Math.max(1, byte(tm.speed, 10)),
 			},
 		},
 	}
 }
 
-// ---- Rücklesen und Wiedererkennen ------------------------------------------
-// GET /Control liefert Enums als Namen; zum erneuten Senden braucht die API Zahlen.
+// ---- Readback and recognition ----------------------------------------------
+// GET /Control returns enums as names; to send them again the API needs numbers.
 
 const EFFECT_NAMES = [
 	'NONE', 'CIRCLE', 'DIV2_RIGHT', 'DIV2_UP', 'WALL_RIGHT', 'WALL_UP', 'WALL_SPLIT_HORIZONTAL', 'WALL_SPLIT_VERTICAL',
@@ -109,7 +109,7 @@ function enumIndex(value, names, prefix) {
 	return i < 0 ? 0 : i
 }
 
-/** Wandelt ein zurückgelesenes Fx-Objekt in sendefähige Form (Enums als Zahl). */
+/** Converts a read-back Fx object into a sendable form (enums as numbers). */
 function fxFromReadback(fx) {
 	if (!fx) return null
 	const t = fx.Trigger || {}
@@ -141,7 +141,7 @@ function fxFromReadback(fx) {
 	}
 }
 
-/** Fingerabdruck eines Effekts: Muster, Geometrie und Farbfolge. */
+/** Fingerprint of an effect: pattern, geometry and color sequence. */
 function fingerprint(effect, geometry, colors) {
 	return `${Number(effect) || 0}|${Number(geometry) || 0}|${colors.map((c) => c.join(',')).join(';')}`
 }
@@ -151,7 +151,7 @@ function fingerprintOfFx(fx) {
 	return fingerprint(f.Effect.Value, f.Effect.GeometrieType, f.FxScenes.map((s) => [s.Value1, s.Value2, s.Value3]))
 }
 
-/** Geschätzte Sekunden pro Farbschritt (erster Schritt) laut Zeitmodell. */
+/** Estimated seconds per color step (first step) according to the timing model. */
 function secondsOfFx(fx) {
 	const f = fxFromReadback(fx)
 	const s = f.FxScenes[0]

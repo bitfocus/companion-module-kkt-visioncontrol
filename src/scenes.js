@@ -1,5 +1,5 @@
-// Szenen und Sequenzen aus GET /Scenes: [{ ItemId, Path, Type, Active }]
-// Path ist der Ordnerpfad der Szenen-Seite inkl. Name, z. B. "Fitness/Spinning".
+// Scenes and sequences from GET /Scenes: [{ ItemId, Path, Type, Active }]
+// Path is the folder path on the scenes page incl. name, e.g. "Fitness/Spinning".
 
 function splitPath(path) {
 	const parts = String(path || '')
@@ -15,26 +15,26 @@ function isSequence(scene) {
 	return t === 'Sequence' || t === 1
 }
 
-/** Anzeigename einer Szene (letzter Pfadteil), Rückfall auf die ID */
+/** Display name of a scene (last path part), falling back to the ID */
 function sceneName(scene) {
-	return splitPath(scene && scene.Path).name || `Szene ${scene && scene.ItemId}`
+	return splitPath(scene && scene.Path).name || `Scene ${scene && scene.ItemId}`
 }
 
 function sceneFolder(scene) {
 	return splitPath(scene && scene.Path).folder
 }
 
-/** Auswahlliste für Dropdowns */
+/** Choice list for dropdowns */
 function sceneChoices(scenes) {
-	if (!Array.isArray(scenes) || scenes.length === 0) return [{ id: '', label: '(keine Szenen in der App gefunden)' }]
+	if (!Array.isArray(scenes) || scenes.length === 0) return [{ id: '', label: '(no scenes found in the app)' }]
 	return scenes.map((s) => {
 		const folder = sceneFolder(s)
-		const kind = isSequence(s) ? ' · Sequenz' : ''
+		const kind = isSequence(s) ? ' · Sequence' : ''
 		return { id: String(s.ItemId), label: `${sceneName(s)}${folder ? ` (${folder})` : ''}${kind}` }
 	})
 }
 
-/** Kurzer Vergleichsschlüssel: ändert sich bei neuen, gelöschten, umbenannten oder verschobenen Szenen */
+/** Short comparison key: changes with new, deleted, renamed or moved scenes */
 function scenesSignature(scenes) {
 	return (scenes || []).map((s) => `${s.ItemId}:${s.Path}:${s.Type}`).join('|')
 }

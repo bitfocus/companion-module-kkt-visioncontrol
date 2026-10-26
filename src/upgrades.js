@@ -1,10 +1,10 @@
-// Migrationsschritte für bestehende Verbindungen. Companion führt jedes Skript
-// genau einmal pro Verbindung aus, neue Skripte immer hinten anhängen.
+// Migration steps for existing connections. Companion runs each script
+// exactly once per connection; always append new scripts at the end.
 
 /**
- * Abfrage-Intervall 2000 → 1000 ms: Eine große Abfrage dauert nur ca. 35 ms,
- * Geräte erscheinen so doppelt so schnell. Nur ändern, wenn noch der alte
- * Standardwert eingestellt ist.
+ * Poll interval 2000 → 1000 ms: a large poll only takes about 35 ms,
+ * so devices appear twice as fast. Only change it if the old default
+ * value is still set.
  */
 function pollIntervalTo1000(_context, props) {
 	const result = { updatedConfig: null, updatedActions: [], updatedFeedbacks: [] }
@@ -15,9 +15,9 @@ function pollIntervalTo1000(_context, props) {
 }
 
 /**
- * Schnelle Abfrage (fastPoll) ausdrücklich eintragen. Ältere Verbindungen
- * kennen das Feld nicht; Companion zeigt es dann als 0 an, und ein Speichern
- * der Einstellungen hätte die schnelle Abfrage abgeschaltet.
+ * Explicitly set the fast poll (fastPoll). Older connections do not know
+ * the field; Companion then shows it as 0, and saving the settings would
+ * have switched off the fast poll.
  */
 function fastPollDefault(_context, props) {
 	const result = { updatedConfig: null, updatedActions: [], updatedFeedbacks: [] }

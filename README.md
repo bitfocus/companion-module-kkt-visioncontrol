@@ -1,79 +1,78 @@
 # companion-module-kkt-visioncontrol
 
-Offizielles Repository: [bitfocus/companion-module-kkt-visioncontrol](https://github.com/bitfocus/companion-module-kkt-visioncontrol)
+Official repository: [bitfocus/companion-module-kkt-visioncontrol](https://github.com/bitfocus/companion-module-kkt-visioncontrol)
 
-Ein [Bitfocus Companion](https://bitfocus.io/companion) Modul für die **Vision Control App** von KKT Künzler Technologies. Es steuert die App über ihre lokale REST-API: Farbe, Helligkeit, Effekte, Szenen und den Sound-Trigger.
+A [Bitfocus Companion](https://bitfocus.io/companion) module for the **Vision Control app** by KKT Künzler Technologies. It controls the app through its local REST API: color, brightness, effects, scenes and the sound trigger.
 
-## Funktionen
+## Features
 
-- Farbe und Dimmer für Gruppen oder einzelne Fixtures setzen (mit Überblendung), Blackout
-- Effekt-Katalog mit 38 fertigen Effekten (Matrix- und Geräte-Pixel, Fitnessstudio-Konzept), Werte einzeln überschreibbar
-- Effekte frei bauen: Muster, Geometrie, Farben, Tempo, Range, Auslöser (Tap, Beat, Pulse)
-- Laufenden Effekt anpassen: schneller, langsamer, heller, dunkler, Range
-- **Drehregler (Stream Deck +):** drehen = Helligkeit, drücken = Blackout an/aus, Balken auf dem Display
-- Anzeige des aktiven Effekts mit seiner Kachel, Netzwerk-Geräte und App-Erreichbarkeit
-- Szenen / Sequenzen an, aus, umschalten; Namen automatisch aus der App
-- Lokale Variablen der Taste für Ziel und Szene
-- Einheitliches Icon Pack für alle Tasten
+- Set color and dimmer for groups or single fixtures (with fade), blackout
+- Effect catalog with 38 ready-made effects (matrix and device pixels, fitness studio concept), individual values can be overridden
+- Build effects freely: pattern, geometry, colors, speed, range, trigger (Tap, Beat, Pulse)
+- Adjust the running effect: faster, slower, brighter, darker, range
+- **Rotary encoders (Stream Deck +):** turn = brightness, press = blackout on/off, bar on the display
+- Display of the active effect with its tile, network devices and app reachability
+- Scenes / sequences on, off, toggle; names taken from the app automatically; fallback that starts scenes even though the app's scene API is broken
+- Local button variables for target and scene
+- Consistent icon pack for all buttons
 
-Details zur Einrichtung stehen in [`companion/HELP.md`](companion/HELP.md).
+Setup details are in [`companion/HELP.md`](companion/HELP.md).
 
-## Entwicklung
+## Development
 
-Das Modul nutzt `@companion-module/base` 1.12 und läuft mit Companion 3.0 bis 5.1 (getestet mit 5.1.0). Modul-ID: `kkt-visioncontrol` (früher `visioncontrol`; Companion bietet bestehende Verbindungen zum Umstellen an).
+The module uses `@companion-module/base` 1.12 and runs on Companion 3.0 to 5.1 (tested with 5.1.0). Module ID: `kkt-visioncontrol` (previously `visioncontrol`; Companion offers to switch existing connections over).
 
-Abhängigkeiten installieren (Yarn 4 über Corepack, wie von Bitfocus vorgegeben):
+Install dependencies (Yarn 4 via Corepack, as required by Bitfocus):
 
 ```bash
 npx corepack yarn install
 ```
 
-Zum lokalen Testen den Ordner als Developer-Modul in Companion einbinden:
-Launcher → Feld **Developer modules path** auf das übergeordnete Verzeichnis
-setzen (den Ordner, der diesen Modulordner enthält), dann
-Companion starten. Companion bringt seine eigene Node-Laufzeit mit; es genügt,
-dass `node_modules` im Modulordner vorhanden ist.
+To test locally, load the folder as a developer module in Companion:
+Launcher → set **Developer modules path** to the parent directory (the folder
+that contains this module folder), then start Companion. Companion ships its
+own Node runtime; `node_modules` only has to exist in the module folder.
 
-### Icon Pack
+### Icon pack
 
-Alle Grafiken der Presets kommen aus einem eigenen Icon Pack mit einer
-gemeinsamen visuellen Sprache: Steuer-Symbole (Blackout, Full On, Dimmer,
-Szene, Sequenz, Tempo, Range, Status …), Effekt-Kacheln und Farb-Kacheln.
-Jede Preset-Taste trägt ein Symbol aus dem Pack.
+All preset graphics come from a dedicated icon pack with one visual language:
+control symbols (Blackout, Full On, Dimmer, Scene, Sequence, Speed, Range,
+Status …), effect tiles and color tiles. Every preset button carries a symbol
+from the pack.
 
-![Alle Preset-Tasten mit dem Icon Pack](docs/iconpack-preview.png)
+![All preset buttons with the icon pack](docs/iconpack-preview.png)
 
-Regeln, die für jede Glyphe gelten:
+Rules for every glyph:
 
-- Raster 24 × 24, Motiv im Feld 2..22
-- Linie 2 Einheiten, runde Enden und Ecken
-- Flächen nur einfarbig in derselben Tinte, keine Verläufe in der Glyphe
-- eine Tinte: weiß auf dunklen, fast schwarz auf hellen Flächen
-- Glyphe immer 32 × 32 px, auf der Taste wie auf der Kachel (gleiche Strichstärke)
+- 24 × 24 grid, motif within 2..22
+- Stroke 2 units, round caps and joins
+- Fills only flat in the same ink, no gradients inside the glyph
+- One ink: white on dark, near-black on light backgrounds
+- Control symbols are full 72 × 72 button images with a 28 px glyph at the top (Companion 5 scales images to the whole button)
 
-Kacheln (72 × 72): Verlauf der Effektfarben, Glyphe des Effektmusters mittig,
-Schriftstreifen unten (45 % schwarz), Radius 12. Aktiv-Zustand: orangener
-Rahmen 3,5 px (`#FF7A00`). Farbfolgen ohne Muster zeigen das Kreislauf-Symbol,
-einfarbige Farb-Kacheln den Tropfen.
+Tiles (72 × 72): gradient of the effect colors, glyph of the effect pattern in
+the center, text band at the bottom (45 % black), radius 12. Active state:
+orange 3.5 px frame (`#FF7A00`). Color sequences without a pattern show the
+cycle symbol, single-color tiles the drop.
 
-Die Glyphen stehen in `scripts/iconpack/glyphs.cjs`, das Layout in
-`scripts/build-icons.cjs`. Neu erzeugen (Windows, macOS, Linux, ohne
-installierte App):
+The glyphs live in `scripts/iconpack/glyphs.cjs`, the layout in
+`scripts/build-icons.cjs`. Regenerate (Windows, macOS, Linux, no installed app
+required):
 
 ```bash
 npx corepack yarn icons
 ```
 
-Das schreibt `icons/*.png` und bündelt sie in `src/icons.generated.json`.
-Mit `node scripts/build-icons.cjs --svg <ordner>` entstehen die SVG-Quellen,
-etwa für Grafik-Programme oder die Dokumentation.
+This writes `icons/*.png` and bundles them into `src/icons.generated.json`.
+`node scripts/build-icons.cjs --svg <folder>` writes the SVG sources, e.g. for
+graphics tools or documentation.
 
-Ein verteilbares Paket bauen (optional, benötigt die Build-Tools):
+Build a distributable package (optional, needs the build tools):
 
 ```bash
 npx corepack yarn package
 ```
 
-## Lizenz
+## License
 
-MIT, siehe [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).

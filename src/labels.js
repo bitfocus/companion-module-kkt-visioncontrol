@@ -1,22 +1,22 @@
-// Einheitliche Beschriftung: genau drei Schriftgrößen im ganzen Modul.
-// Gewählt wird die größte Stufe, in der der Text einzeilig passt; sonst die
-// größte Stufe, in der er zweizeilig passt (Umbruch an Leerzeichen und nach
-// Bindestrichen).
+// Uniform labeling: exactly three font sizes across the whole module.
+// The largest size in which the text fits on one line is chosen; otherwise the
+// largest size in which it fits on two lines (wrapping at spaces and after
+// hyphens).
 //
-// Gemessen wie Companion 5.1 zeichnet: Schrift "Companion-sans" ist Arimo
-// (Arial-Maße). Eine klassische Größe s wird ohne Topbar zu s / 0,6 Einheiten;
-// eine Einheit ist 1 % der Tastenhöhe abzüglich 2 × 1,5 % Rand, geteilt durch
-// das Zeilenbox-Verhältnis der Schrift (1,117). Auf einer 72-px-Taste ergibt
-// das s × 1,042 px. Nutzbare Breite: 72 px abzüglich 2 × 3 % Rand = 67,7 px.
-// Die Presets setzen deshalb show_topbar: false (mit Topbar rechnet Companion
-// mit dem Faktor 2,1 statt 1/0,6, dann brechen z. B. "Cardio" und "Abendrot").
+// Measured the way Companion 5.1 draws: the font "Companion-sans" is Arimo
+// (Arial metrics). A classic size s becomes s / 0.6 units without the topbar;
+// one unit is 1 % of the button height minus 2 × 1.5 % margin, divided by
+// the font's line box ratio (1.117). On a 72 px button this gives
+// s × 1.042 px. Usable width: 72 px minus 2 × 3 % margin = 67.7 px.
+// The presets therefore set show_topbar: false (with the topbar Companion uses
+// the factor 2.1 instead of 1/0.6, and then e.g. "Cardio" and "Sunset" wrap).
 
 const SIZES = [24, 18, 14]
-const MAX_WIDTH = 66 // 67,7 px abzüglich Sicherheitsrand
+const MAX_WIDTH = 66 // 67.7 px minus safety margin
 const PX_PER_SIZE = 1.042
 const LINE_BOX = 1.117
 
-// Arimo: Vorschubbreite je Zeichen in 1/1000 em
+// Arimo: advance width per character in 1/1000 em
 const ADV_CHARS =
 	" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÄÖÜäöüß−–…°€"
 const ADV_WIDTHS = [
@@ -27,19 +27,19 @@ const ADV_WIDTHS = [
 ]
 const ADV = new Map([...ADV_CHARS].map((c, i) => [c, ADV_WIDTHS[i]]))
 
-/** Breite in px auf einer 72-px-Taste */
+/** Width in px on a 72 px button */
 function textWidth(text, size) {
 	let em = 0
 	for (const c of String(text)) em += ADV.get(c) ?? 600
 	return (em / 1000) * size * PX_PER_SIZE
 }
 
-/** Höhe eines Textblocks mit n Zeilen in px */
+/** Height of a text block with n lines in px */
 function textHeight(lines, size) {
 	return lines * size * PX_PER_SIZE * LINE_BOX
 }
 
-// Wörter; nach einem Bindestrich darf umbrochen werden ("Cool-" / "down")
+// Words; wrapping is allowed after a hyphen ("Cool-" / "down")
 function tokens(text) {
 	return String(text)
 		.split(/\s+/)
@@ -50,8 +50,8 @@ function tokens(text) {
 const VOWEL = /[aeiouäöüyAEIOUÄÖÜY]/
 
 /**
- * Notfall-Trennung eines zu breiten Worts: bevorzugt vor einer Silbe
- * (Konsonant + Vokal, z. B. "Lang-samer", "Warm-weiß"), möglichst mittig.
+ * Emergency hyphenation of a word that is too wide: preferably before a syllable
+ * (consonant + vowel, e.g. "Bright-ness", "Recep-tion"), as close to the middle as possible.
  */
 function hyphenate(word, size) {
 	const chars = [...word]
@@ -66,8 +66,8 @@ function hyphenate(word, size) {
 	return best ? [best.head, best.tail] : null
 }
 
-// Gieriger Zeilenumbruch; null, wenn ein Wortteil zu breit ist
-// (mit allowHyphen wird ein solches Wort stattdessen getrennt)
+// Greedy line wrapping; null if a word part is too wide
+// (with allowHyphen such a word is hyphenated instead)
 function wrap(text, size, allowHyphen = false) {
 	const lines = []
 	let line = ''
@@ -94,8 +94,8 @@ function wrap(text, size, allowHyphen = false) {
 
 /**
  * @param {string} text
- * @param {number} maxSize    größte erlaubte Stufe (24 oder 18)
- * @param {number} maxHeight  verfügbare Höhe für den Text in px
+ * @param {number} maxSize    largest allowed size (24 or 18)
+ * @param {number} maxHeight  available height for the text in px
  * @returns {{ size: string, lines: string[] }}
  */
 function fitLabel(text, maxSize = 24, maxHeight = 72) {
@@ -111,7 +111,7 @@ function fitLabel(text, maxSize = 24, maxHeight = 72) {
 	return { size: String(small), lines }
 }
 
-/** Text mit expliziten Zeilenumbrüchen, damit Companion genau so umbricht */
+/** Text with explicit line breaks so Companion wraps exactly like this */
 function labelText(text, maxSize = 24, maxHeight = 72) {
 	const fit = fitLabel(text, maxSize, maxHeight)
 	return { text: fit.lines.join('\n'), size: fit.size, lineCount: fit.lines.length }

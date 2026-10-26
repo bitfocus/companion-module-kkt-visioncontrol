@@ -1,17 +1,17 @@
 /*
- * Vision Control Icon Pack: alle Glyphen in einer visuellen Sprache.
+ * Vision Control Icon Pack: all glyphs in one visual language.
  *
- * Regeln (gelten für jede Glyphe):
- *   - Raster 24 × 24, Motiv im Feld 2..22 (2 Einheiten Rand)
- *   - Linie 2 Einheiten, runde Enden und Ecken (stroke-linecap/-linejoin round)
- *   - Flächen nur einfarbig in derselben Tinte wie die Linie, keine Verläufe
- *   - eine Tinte pro Glyphe (weiß auf dunkel, fast schwarz auf hell)
- *   - Ecken an Rechtecken rx 1–2, Kreise und Bögen statt Freihand
+ * Rules (apply to every glyph):
+ *   - Grid 24 × 24, motif in the field 2..22 (2 units margin)
+ *   - Line 2 units, round ends and corners (stroke-linecap/-linejoin round)
+ *   - Fills only single-color in the same ink as the line, no gradients
+ *   - one ink per glyph (white on dark, near black on light)
+ *   - Corners on rectangles rx 1–2, circles and arcs instead of freehand
  *
- * Jede Glyphe ist eine Funktion (ink) => SVG-Fragment im 24er-Raster.
+ * Each glyph is a function (ink) => SVG fragment in the 24 grid.
  */
 
-const S = 2 // Linienstärke im 24er-Raster
+const S = 2 // Stroke width in the 24 grid
 
 const line = (d, ink, extra = '') => `<path d="${d}" fill="none" stroke="${ink}" stroke-width="${S}" stroke-linecap="round" stroke-linejoin="round"${extra}/>`
 const fill = (d, ink) => `<path d="${d}" fill="${ink}"/>`
@@ -21,11 +21,11 @@ const rect = (x, y, w, h, rx, ink) => `<rect x="${x}" y="${y}" width="${w}" heig
 const box = (x, y, w, h, rx, ink) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${ink}"/>`
 const rot = (deg, inner) => `<g transform="rotate(${deg} 12 12)">${inner}</g>`
 
-// Vierzackiger Funke (gefüllt), Mittelpunkt x/y, Halbmesser s
+// Four-pointed sparkle (filled), center x/y, radius s
 const sparkle = (x, y, s, ink) =>
 	fill(`M${x} ${y - s}Q${x + s * 0.18} ${y - s * 0.18} ${x + s} ${y}Q${x + s * 0.18} ${y + s * 0.18} ${x} ${y + s}Q${x - s * 0.18} ${y + s * 0.18} ${x - s} ${y}Q${x - s * 0.18} ${y - s * 0.18} ${x} ${y - s}Z`, ink)
 
-// Tachobogen mit Zeiger (für schneller / langsamer)
+// Speedometer arc with needle (for faster / slower)
 const gauge = (tx, ty, ink) =>
 	line('M4 17a8 8 0 1 1 16 0', ink) + line('M12 9V7.5M7.2 11.2 6.2 10.2M16.8 11.2l1-1', ink) + line(`M12 17L${tx} ${ty}`, ink) + dot(12, 17, 1.8, ink)
 
@@ -36,7 +36,7 @@ const stars = (ink) => sparkle(10, 11.5, 7, ink) + sparkle(18, 5.5, 3, ink) + sp
 const rings = (ink) => circle(12, 12, 9, ink) + circle(12, 12, 5.2, ink) + dot(12, 12, 2, ink)
 const chevrons = (ink) => line('M5 6l6 6-6 6M12.5 6l6 6-6 6', ink)
 
-// ---- Steuer-Symbole (Tasten mit Symbol oben, Text unten) --------------------
+// ---- Control icons (buttons with icon on top, text below) -------------------
 const CONTROL = {
 	blackout: (k) => line('M19.5 14.2A8 8 0 1 1 9.8 4.5a6.4 6.4 0 0 0 9.7 9.7Z', k),
 	full_on: (k) => circle(12, 12, 4, k) + line('M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8', k),
@@ -70,9 +70,9 @@ const CONTROL = {
 	sequence: (k) => rect(2.5, 7, 7, 10, 1.5, k) + rect(14.5, 7, 7, 10, 1.5, k) + line('M10.8 12h2.4M12 10.3l1.7 1.7-1.7 1.7', k),
 }
 
-// ---- Effekt-Motive (Kacheln und Motiv-Ebenen) ----------------------------------
-// Namen wie in src/effects-data.js (MOTIFS / EFFECT_MOTIF). 'cycle' steht für
-// Farbfolgen ohne Muster (EffectType 0), 'drop' für einfarbige Farb-Kacheln.
+// ---- Effect motifs (tiles and motif layers) ------------------------------------
+// Names as in src/effects-data.js (MOTIFS / EFFECT_MOTIF). 'cycle' stands for
+// color cycles without a pattern (EffectType 0), 'drop' for single-color tiles.
 const MOTIF = {
 	cycle: (k) => line('M19.4 9A8 8 0 0 0 5.2 7.6M4.6 15a8 8 0 0 0 14.2 1.4', k) + line('M5 3.8v4h4M19 20.2v-4h-4', k),
 	drop: CONTROL.color,

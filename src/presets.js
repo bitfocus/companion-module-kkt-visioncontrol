@@ -8,10 +8,10 @@ const WHITE = combineRgb(255, 255, 255)
 const BLACK = combineRgb(0, 0, 0)
 const ORANGE = combineRgb(255, 122, 0)
 
-// Größte Schriftstufe: Kacheln haben unten nur einen schmalen Streifen
+// Largest font size: tiles only have a narrow strip at the bottom
 const TILE_MAX_FONT = 18
 const GLYPH_MAX_FONT = 24
-// Platz für den Text in px: unter dem Symbol (oben 28 px ab y 5) bzw. auf dem Kachelstreifen
+// Space for the text in px: below the icon (top 28 px from y 5) or on the tile strip
 const GLYPH_TEXT_HEIGHT = 36
 const TILE_TEXT_HEIGHT = 34
 
@@ -20,7 +20,7 @@ function textOn(r, g, b) {
 	return luminance > 150 ? BLACK : WHITE
 }
 
-// Steuer-Taste mit App-Symbol oben, Text unten (eine der drei Schriftstufen)
+// Control button with app icon on top, text below (one of the three font sizes)
 function look(text, bgRgb, iconKey) {
 	const [r, g, b] = bgRgb
 	const color = textOn(r, g, b)
@@ -35,7 +35,7 @@ function look(text, bgRgb, iconKey) {
 	return style
 }
 
-// Kachel im App-Stil; Text weiß auf dunklem Streifen
+// Tile in app style; white text on a dark strip
 function tileLook(text, tileId, fallbackRgb) {
 	const png = tile(tileId)
 	if (!png) return look(text, fallbackRgb, null)
@@ -43,7 +43,7 @@ function tileLook(text, tileId, fallbackRgb) {
 	return { text: lbl.text, size: lbl.size, color: WHITE, bgcolor: BLACK, png64: png, pngalignment: 'center:center', alignment: 'center:bottom' }
 }
 
-// Feedback-Stil "aktiv": Kachel mit orangem Rahmen, sonst orange Fläche
+// Feedback style "active": tile with orange frame, otherwise orange fill
 function activeStyle(tileId) {
 	const png = tile(`${tileId}_active`)
 	return png ? { png64: png } : { bgcolor: ORANGE, color: WHITE }
@@ -54,12 +54,12 @@ module.exports = function (self) {
 	const GROUP = '0'
 	const label = self.label || 'visioncontrol'
 
-	// ---- Steuerung ------------------------------------------------------------
+	// ---- Control --------------------------------------------------------------
 
 	presets['blackout'] = {
 		type: 'button',
-		category: 'Steuerung',
-		name: 'Blackout (Gruppe 0)',
+		category: 'Control',
+		name: 'Blackout (Group 0)',
 		style: look('Blackout', [0, 0, 0], 'blackout'),
 		steps: [{ down: [{ actionId: 'blackout', options: { target: 'group', id: GROUP, fade: 10 } }], up: [] }],
 		feedbacks: [],
@@ -67,8 +67,8 @@ module.exports = function (self) {
 
 	presets['full_on'] = {
 		type: 'button',
-		category: 'Steuerung',
-		name: 'Full On (weiß 100 %)',
+		category: 'Control',
+		name: 'Full On (white 100 %)',
 		style: look('Full On', [255, 255, 255], 'full_on'),
 		steps: [
 			{
@@ -83,14 +83,14 @@ module.exports = function (self) {
 
 	presets['sound_trigger'] = {
 		type: 'button',
-		category: 'Steuerung',
+		category: 'Control',
 		name: 'Sound Trigger',
 		style: look('Sound', [51, 51, 51], 'sound'),
 		steps: [{ down: [{ actionId: 'sound_trigger', options: {} }], up: [] }],
 		feedbacks: [],
 	}
 
-	// ---- Dimmerstufen ---------------------------------------------------------
+	// ---- Dimmer levels --------------------------------------------------------
 
 	for (const pct of [0, 10, 25, 50, 75, 100]) {
 		const shade = Math.round((pct / 100) * 255)
@@ -104,13 +104,13 @@ module.exports = function (self) {
 		}
 	}
 
-	// ---- Farben (Kacheln wie "Farbe Erscheinungsbild") -----------------------
+	// ---- Colors (tiles like "Color appearance") -------------------------------
 
 	for (const c of COLORS) {
 		const [r, g, b] = c.rgb
 		presets[`color_${c.key}`] = {
 			type: 'button',
-			category: 'Farben',
+			category: 'Colors',
 			name: c.name,
 			style: tileLook(c.name, `color_${c.key}`, c.rgb),
 			steps: [
@@ -128,7 +128,7 @@ module.exports = function (self) {
 		}
 	}
 
-	// ---- Alle Katalog-Effekte (Effekte, Pixel/Matrix, Fitnessstudio) ----------
+	// ---- All catalog effects (effects, pixel/matrix, gym) ---------------------
 
 	for (const e of CATALOG) {
 		presets[`fx_${e.id}`] = {
@@ -168,20 +168,20 @@ module.exports = function (self) {
 		}
 	}
 
-	// ---- Laufender Effekt (anpassen und anzeigen) -----------------------------
+	// ---- Running effect (adjust and display) ----------------------------------
 
 	const ADJUST = [
-		{ key: 'faster', name: 'Schneller', icon: 'rabbit' },
-		{ key: 'slower', name: 'Langsamer', icon: 'turtle' },
-		{ key: 'brighter', name: 'Heller', icon: 'full_on' },
-		{ key: 'darker', name: 'Dunkler', icon: 'blackout' },
+		{ key: 'faster', name: 'Faster', icon: 'rabbit' },
+		{ key: 'slower', name: 'Slower', icon: 'turtle' },
+		{ key: 'brighter', name: 'Brighter', icon: 'full_on' },
+		{ key: 'darker', name: 'Darker', icon: 'blackout' },
 		{ key: 'range_up', name: 'Range +', icon: 'range' },
 		{ key: 'range_down', name: 'Range −', icon: 'range' },
 	]
 	for (const a of ADJUST) {
 		presets[`adjust_${a.key}`] = {
 			type: 'button',
-			category: 'Laufender Effekt',
+			category: 'Running effect',
 			name: a.name,
 			style: look(a.name, [40, 40, 40], a.icon),
 			steps: [{ down: [{ actionId: 'adjust_effect', options: { target: 'group', id: GROUP, what: a.key, percent: 20, rangeStep: 5 } }], up: [] }],
@@ -191,8 +191,8 @@ module.exports = function (self) {
 
 	presets['active_info'] = {
 		type: 'button',
-		category: 'Laufender Effekt',
-		name: 'Anzeige: aktiver Effekt',
+		category: 'Running effect',
+		name: 'Display: active effect',
 		style: {
 			text: `$(${label}:active_effect)`,
 			size: '14',
@@ -203,14 +203,14 @@ module.exports = function (self) {
 			alignment: 'center:bottom',
 		},
 		steps: [{ down: [], up: [] }],
-		// Übernimmt automatisch die Kachel des laufenden Effekts
+		// Automatically takes on the tile of the running effect
 		feedbacks: [{ feedbackId: 'active_effect_image', options: { target: 'group', id: GROUP } }],
 	}
 
 	presets['active_tempo'] = {
 		type: 'button',
-		category: 'Laufender Effekt',
-		name: 'Anzeige: Tempo und Helligkeit',
+		category: 'Running effect',
+		name: 'Display: speed and brightness',
 		style: {
 			text: `$(${label}:active_seconds)\n$(${label}:active_dimmer)`,
 			size: '14',
@@ -224,20 +224,20 @@ module.exports = function (self) {
 		feedbacks: [],
 	}
 
-	// ---- Drehregler (Stream Deck +) -------------------------------------------
-	// Drehen ändert die Helligkeit, Drücken schaltet Blackout an/aus.
-	// Der Balken zeigt die Helligkeit auf dem Display über dem Regler.
+	// ---- Rotary encoder (Stream Deck +) ---------------------------------------
+	// Turning changes the brightness, pressing toggles blackout on/off.
+	// The bar shows the brightness on the display above the encoder.
 
 	presets['encoder_dimmer'] = {
 		type: 'button',
-		category: 'Drehregler (Stream Deck +)',
-		name: 'Helligkeit: drehen = heller/dunkler, drücken = Blackout an/aus',
+		category: 'Rotary encoder (Stream Deck +)',
+		name: 'Brightness: turn = brighter/darker, press = Blackout on/off',
 		options: { rotaryActions: true },
 		style: {
 			text: `$(${label}:active_dimmer)`,
 			size: '14',
 			color: WHITE,
-			bgcolor: BLACK, // schwarz wie der Rest des Touch-Displays
+			bgcolor: BLACK, // black like the rest of the touch display
 			png64: icon('dimmer', 'light'),
 			pngalignment: 'center:top',
 			alignment: 'center:bottom',
@@ -255,7 +255,7 @@ module.exports = function (self) {
 
 	presets['encoder_dimmer_fine'] = {
 		...presets['encoder_dimmer'],
-		name: 'Helligkeit fein (1 % je Raste)',
+		name: 'Brightness fine (1 % per detent)',
 		steps: [
 			{
 				down: [{ actionId: 'dimmer_toggle', options: { target: 'group', id: GROUP, fade: 0 } }],
@@ -266,17 +266,17 @@ module.exports = function (self) {
 		],
 	}
 
-	// Companion legt beim Stream Deck + die Drehregler in Reihe 4, das Touch-Display
-	// zeigt Reihe 3. Diese Taste gehört über den Regler: Sie zeigt Wert und Balken,
-	// Tippen = Blackout an/aus, senkrecht Wischen = heller/dunkler.
+	// On the Stream Deck +, Companion puts the rotary encoders in row 4, the touch display
+	// shows row 3. This button belongs above the encoder: it shows value and bar,
+	// tap = Blackout on/off, vertical swipe = brighter/darker.
 	presets['encoder_dimmer_display'] = {
 		...presets['encoder_dimmer'],
-		name: 'Helligkeit: Display über dem Regler (tippen = Blackout, wischen = heller/dunkler)',
+		name: 'Brightness: display above the encoder (tap = Blackout, swipe = brighter/darker)',
 	}
 
-	// ---- Szenen: automatisch aus der App ----------------------------------------
-	// Der Tastentext ist die Namens-Variable der Szene, damit Umbenennungen in
-	// der App auch bereits platzierte Tasten erreichen.
+	// ---- Scenes: automatically from the app -------------------------------------
+	// The button text is the scene's name variable, so that renames in
+	// the app also reach buttons that are already placed.
 
 	const ACTIVE = { bgcolor: combineRgb(0, 153, 51), color: WHITE }
 	const scenes = Array.isArray(self.scenes) ? self.scenes : []
@@ -287,27 +287,27 @@ module.exports = function (self) {
 		const folder = sceneFolder(s)
 		const seq = isSequence(s)
 		const style = look(name, [30, 30, 30], seq ? 'sequence' : 'scene')
-		// Umbrochene Namens-Variable in fester Größe 14, damit auch spätere
-		// Umbenennungen in der App sauber auf die Taste passen
+		// Wrapped name variable at a fixed size of 14, so that later
+		// renames in the app also fit cleanly on the button
 		style.text = `$(${label}:scene_${id}_label)`
 		style.size = '14'
 		presets[`scene_${id}`] = {
 			type: 'button',
-			category: folder ? `Szenen: ${folder}` : 'Szenen',
-			name: `${seq ? 'Sequenz' : 'Szene'}: ${name}`,
+			category: folder ? `Scenes: ${folder}` : 'Scenes',
+			name: `${seq ? 'Sequence' : 'Scene'}: ${name}`,
 			style,
 			steps: [{ down: [{ actionId: 'scene_toggle', options: { itemId: id } }], up: [] }],
 			feedbacks: [{ feedbackId: 'scene_active', options: { itemId: id }, style: ACTIVE }],
 		}
 	}
 
-	// Noch keine Szenen in der App: Beispieltasten mit Item-ID
+	// No scenes in the app yet: example buttons with item ID
 	for (const id of scenes.length ? [] : ['1', '2', '3', '4']) {
 		presets[`scene_toggle_${id}`] = {
 			type: 'button',
-			category: 'Szenen',
-			name: `Szene ${id} umschalten`,
-			style: look(`Szene ${id}`, [30, 30, 30], 'scene'),
+			category: 'Scenes',
+			name: `Toggle scene ${id}`,
+			style: look(`Scene ${id}`, [30, 30, 30], 'scene'),
 			steps: [{ down: [{ actionId: 'scene_toggle', options: { itemId: id } }], up: [] }],
 			feedbacks: [{ feedbackId: 'scene_active', options: { itemId: id }, style: ACTIVE }],
 		}
@@ -316,18 +316,18 @@ module.exports = function (self) {
 	if (!scenes.length) {
 		presets['scene_on_example'] = {
 			type: 'button',
-			category: 'Szenen',
-			name: 'Szene An (Beispiel ID 1)',
-			style: look('Szene 1 An', [0, 102, 0], 'play'),
+			category: 'Scenes',
+			name: 'Scene On (example ID 1)',
+			style: look('Scene 1 On', [0, 102, 0], 'play'),
 			steps: [{ down: [{ actionId: 'scene_on', options: { itemId: '1' } }], up: [] }],
 			feedbacks: [{ feedbackId: 'scene_active', options: { itemId: '1' }, style: ACTIVE }],
 		}
 
 		presets['scene_off_example'] = {
 			type: 'button',
-			category: 'Szenen',
-			name: 'Szene Aus (Beispiel ID 1)',
-			style: look('Szene 1 Aus', [102, 0, 0], 'pause'),
+			category: 'Scenes',
+			name: 'Scene Off (example ID 1)',
+			style: look('Scene 1 Off', [102, 0, 0], 'pause'),
 			steps: [{ down: [{ actionId: 'scene_off', options: { itemId: '1' } }], up: [] }],
 			feedbacks: [],
 		}
@@ -338,9 +338,9 @@ module.exports = function (self) {
 	presets['network_devices'] = {
 		type: 'button',
 		category: 'Status',
-		name: 'Netzwerk-Geräte und App erreichbar (grün / rot)',
+		name: 'Network devices and app reachable (green / red)',
 		style: {
-			text: `Netzwerk\n$(${label}:network_devices) Geräte`,
+			text: `Network\n$(${label}:network_devices) devices`,
 			size: '14',
 			color: WHITE,
 			bgcolor: combineRgb(40, 40, 40),
@@ -355,14 +355,14 @@ module.exports = function (self) {
 	presets['status'] = {
 		type: 'button',
 		category: 'Status',
-		name: 'Verbindungsstatus',
+		name: 'Connection status',
 		style: look('Vision', [40, 40, 40], 'status'),
 		steps: [{ down: [], up: [] }],
 		feedbacks: [{ feedbackId: 'connected', options: {}, style: { bgcolor: combineRgb(0, 102, 204), color: WHITE } }],
 	}
 
-	// Ohne ausdrückliche Angabe rechnet Companion 5 mit Topbar und vergrößert den
-	// Text um den Faktor 2,1 statt 1/0,6; dann brechen Wörter mitten im Wort um.
+	// Without an explicit setting, Companion 5 assumes a topbar and enlarges the
+	// text by a factor of 2.1 instead of 1/0.6; words then break mid-word.
 	for (const p of Object.values(presets)) {
 		if (p && p.style && p.style.show_topbar === undefined) p.style.show_topbar = false
 	}

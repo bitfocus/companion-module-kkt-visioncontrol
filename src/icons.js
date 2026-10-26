@@ -1,9 +1,9 @@
 const fs = require('fs')
 const path = require('path')
 
-// Grafiken für die Presets aus dem Icon Pack (scripts/build-icons.cjs):
-// Steuer-Symbole, Effekt- und Farbkacheln, Motiv-Ebenen. Bevorzugt aus src/icons.generated.json,
-// damit sie im gebauten Companion-Paket enthalten sind; sonst aus ./icons.
+// Graphics for the presets from the icon pack (scripts/build-icons.cjs):
+// control icons, effect and color tiles, motif layers. Preferably from src/icons.generated.json,
+// so they are included in the built Companion package; otherwise from ./icons.
 let BUNDLE = {}
 try {
 	BUNDLE = require('./icons.generated.json')
@@ -28,20 +28,20 @@ function load(name) {
 }
 
 /**
- * Symbol als Base64-PNG (für style.png64) oder undefined.
- * @param {string} key      Symbolname, z. B. 'scene'
- * @param {'light'|'dark'} variant  'light' = weiße Glyphe, 'dark' = schwarze Glyphe
+ * Icon as base64 PNG (for style.png64) or undefined.
+ * @param {string} key      icon name, e.g. 'scene'
+ * @param {'light'|'dark'} variant  'light' = white glyph, 'dark' = black glyph
  */
 function icon(key, variant = 'light') {
 	return load(`${key}-${variant}`)
 }
 
-/** 72×72-Kachel (Farbverlauf + Glyphe des Effektmusters) oder undefined. */
+/** 72×72 tile (color gradient + glyph of the effect pattern) or undefined. */
 function tile(id) {
 	return load(`tile_${id}`)
 }
 
-/** Durchsichtige Motiv-Ebene für einen Effekttyp (0..20), für Effekte ohne Katalog-Kachel. */
+/** Transparent motif layer for an effect type (0..20), for effects without a catalog tile. */
 function overlay(effectType) {
 	return load(`overlay_fx${Number(effectType) || 0}`)
 }

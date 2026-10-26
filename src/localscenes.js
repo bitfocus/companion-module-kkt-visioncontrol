@@ -1,7 +1,7 @@
-// Rückfall für Szenennamen: In Vision Control 2.17.3 und 2.18.4 antwortet GET /Scenes mit
-// HTTP 500 (auch wenn Szenen existieren). Läuft Companion auf demselben PC wie
-// die App, lesen wir Namen und IDs aus den lokalen Szenendateien der App.
-// Gelesen werden nur die Szenendateien, keine Netzwerk-/Passwortdaten.
+// Fallback for scene names: in Vision Control 2.17.3 and 2.18.4, GET /Scenes responds with
+// HTTP 500 (even if scenes exist). If Companion runs on the same PC as
+// the app, we read names and IDs from the app's local scene files.
+// Only the scene files are read, no network/password data.
 
 const fs = require('fs')
 const os = require('os')
@@ -9,14 +9,14 @@ const path = require('path')
 
 const FILES = ['IQIQCreativeScenes.json', 'IQIQCreativeScenesNetwork.json']
 
-// Companion startet Module mit reduzierter Umgebung, LOCALAPPDATA fehlt dort.
-// Daher zusätzlich über das Benutzerprofil suchen (os.homedir() fragt Windows direkt).
+// Companion starts modules with a reduced environment, LOCALAPPDATA is missing there.
+// So also search via the user profile (os.homedir() asks Windows directly).
 function packageBases() {
 	const roots = [process.env.LOCALAPPDATA]
 	try {
 		roots.push(path.join(os.homedir(), 'AppData', 'Local'))
 	} catch {
-		// kein Benutzerprofil ermittelbar
+		// no user profile could be determined
 	}
 	if (process.env.USERPROFILE) roots.push(path.join(process.env.USERPROFILE, 'AppData', 'Local'))
 	return [...new Set(roots.filter(Boolean).map((r) => path.join(r, 'Packages')))]
@@ -33,7 +33,7 @@ function findLocalStateDirs() {
 				.filter((d) => fs.existsSync(d))
 			if (dirs.length) return dirs
 		} catch {
-			// nächster Kandidat
+			// next candidate
 		}
 	}
 	return []
@@ -58,8 +58,8 @@ function readLocalScenes() {
 				const s = item && item.CreativeScene
 				if (!s || s.ID === undefined) continue
 				if (!out.has(s.ID)) {
-					// detail: gespeicherte Werte, um die laufende Szene am Programmer zu erkennen
-					out.set(s.ID, { ItemId: s.ID, Path: String(s.Name || `Szene ${s.ID}`), Type: 'Scene', Active: false, source: 'local', detail: s })
+					// detail: saved values, used to recognize the running scene in the programmer
+					out.set(s.ID, { ItemId: s.ID, Path: String(s.Name || `Scene ${s.ID}`), Type: 'Scene', Active: false, source: 'local', detail: s })
 				}
 			}
 		}
@@ -67,7 +67,7 @@ function readLocalScenes() {
 	return [...out.values()].sort((a, b) => a.ItemId - b.ItemId)
 }
 
-/** Gespeicherte Szene (CreativeScene) mit allen Werten, oder null */
+/** Saved scene (CreativeScene) with all values, or null */
 function readLocalSceneDetail(id) {
 	for (const dir of findLocalStateDirs()) {
 		for (const file of FILES) {
@@ -78,7 +78,7 @@ function readLocalSceneDetail(id) {
 				const hit = ((data && data.Scenes) || []).find((it) => it && it.CreativeScene && String(it.CreativeScene.ID) === String(id))
 				if (hit) return hit.CreativeScene
 			} catch {
-				// nächste Datei
+				// next file
 			}
 		}
 	}
@@ -86,9 +86,9 @@ function readLocalSceneDetail(id) {
 }
 
 /**
- * Beobachtet die Szenendateien der App und ruft onChange (entprellt) auf,
- * sobald die App eine Szene anlegt, umbenennt oder löscht.
- * @returns {() => void} beendet die Beobachtung
+ * Watches the app's scene files and calls onChange (debounced)
+ * as soon as the app creates, renames or deletes a scene.
+ * @returns {() => void} stops watching
  */
 function watchLocalScenes(onChange, debounceMs = 200) {
 	let timer = null
@@ -106,7 +106,7 @@ function watchLocalScenes(onChange, debounceMs = 200) {
 				}),
 			)
 		} catch {
-			// ohne Beobachtung bleibt die normale Abfrage
+			// without watching, the normal poll remains
 		}
 	}
 	return () => {

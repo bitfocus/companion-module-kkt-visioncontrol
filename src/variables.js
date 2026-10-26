@@ -2,25 +2,25 @@ const { sceneName } = require('./scenes')
 
 module.exports = function (self) {
 	const defs = [
-		{ variableId: 'connection', name: 'Verbindungsstatus (connected/disconnected)' },
-		{ variableId: 'network_name', name: 'Netzwerkname' },
-		{ variableId: 'network_id', name: 'Netzwerk-ID' },
-		{ variableId: 'scene_count', name: 'Anzahl Szenen/Sequenzen' },
-		{ variableId: 'active_effect', name: 'Aktiver Effekt (Name) der Status-Gruppe' },
-		{ variableId: 'active_effect_id', name: 'Aktiver Effekt (Katalog-ID, custom, color:… oder off)' },
-		{ variableId: 'active_category', name: 'Kategorie des aktiven Effekts' },
-		{ variableId: 'active_seconds', name: 'Sekunden pro Farbschritt des aktiven Effekts' },
-		{ variableId: 'active_dimmer', name: 'Helligkeit der Status-Gruppe' },
-		{ variableId: 'active_range', name: 'Range des aktiven Effekts' },
-		{ variableId: 'network_devices', name: 'Geräte im Netzwerk (Anzahl, auch ausgeschaltete)' },
-		{ variableId: 'network_device_names', name: 'Geräte im Netzwerk (Namen mit Seriennummer-Ende)' },
-		{ variableId: 'app_reachable', name: 'App erreichbar (ja/nein)' },
+		{ variableId: 'connection', name: 'Connection status (connected/disconnected)' },
+		{ variableId: 'network_name', name: 'Network name' },
+		{ variableId: 'network_id', name: 'Network ID' },
+		{ variableId: 'scene_count', name: 'Number of scenes/sequences' },
+		{ variableId: 'active_effect', name: 'Active effect (name) of the status group' },
+		{ variableId: 'active_effect_id', name: 'Active effect (catalog ID, custom, color:… or off)' },
+		{ variableId: 'active_category', name: 'Category of the active effect' },
+		{ variableId: 'active_seconds', name: 'Seconds per color step of the active effect' },
+		{ variableId: 'active_dimmer', name: 'Brightness of the status group' },
+		{ variableId: 'active_range', name: 'Range of the active effect' },
+		{ variableId: 'network_devices', name: 'Devices in the network (count, including switched-off ones)' },
+		{ variableId: 'network_device_names', name: 'Devices in the network (names with end of serial number)' },
+		{ variableId: 'app_reachable', name: 'App reachable (yes/no)' },
 	]
-	// Pro Szene: Name aus der App und Aktiv-Status (folgen Umbenennungen automatisch)
+	// Per scene: name from the app and active state (automatically follow renames)
 	for (const s of self.scenes || []) {
-		defs.push({ variableId: `scene_${s.ItemId}_name`, name: `Szene ${s.ItemId}: Name (${sceneName(s)})` })
-		defs.push({ variableId: `scene_${s.ItemId}_label`, name: `Szene ${s.ItemId}: Name für Tasten (umbrochen, Größe 14)` })
-		defs.push({ variableId: `scene_${s.ItemId}_active`, name: `Szene ${s.ItemId}: aktiv (true/false)` })
+		defs.push({ variableId: `scene_${s.ItemId}_name`, name: `Scene ${s.ItemId}: Name (${sceneName(s)})` })
+		defs.push({ variableId: `scene_${s.ItemId}_label`, name: `Scene ${s.ItemId}: Name for buttons (wrapped, size 14)` })
+		defs.push({ variableId: `scene_${s.ItemId}_active`, name: `Scene ${s.ItemId}: active (true/false)` })
 	}
 	self.setVariableDefinitions(defs)
 }

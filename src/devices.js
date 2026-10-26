@@ -1,22 +1,22 @@
-// Geräte im Vision-Netzwerk und Erreichbarkeit der App.
+// Devices in the Vision network and reachability of the app.
 //
-// Wichtig: GET /Network/Info listet alle Geräte, die zum Netzwerk GEHÖREN,
-// auch ausgeschaltete (per Test bestätigt). Ob ein Gerät eingeschaltet bzw.
-// erreichbar ist, liefert die REST-API derzeit nicht. Die Anzeige zählt daher
-// nur die Netzwerk-Geräte und färbt nach der Erreichbarkeit der App.
+// Important: GET /Network/Info lists all devices that BELONG to the network,
+// including switched-off ones (confirmed by testing). Whether a device is on or
+// reachable is currently not provided by the REST API. The display therefore
+// only counts the network devices and colors by the app's reachability.
 
-/** Name eines Geräts; das Seriennummer-Ende macht gleichnamige Geräte unterscheidbar */
+/** Name of a device; the end of the serial number distinguishes devices with the same name */
 function deviceLabel(f) {
-	const base = (f && (f.DeviceLabel || f.Fixturename)) || 'Gerät'
+	const base = (f && (f.DeviceLabel || f.Fixturename)) || 'Device'
 	const serial = f && f.Serial !== undefined ? String(f.Serial) : ''
 	return serial ? `${base} #${serial.slice(-4)}` : base
 }
 
 /**
  * @param {object} p
- * @param {boolean} p.connected  API der App erreichbar
- * @param {boolean} p.readOk     GET /Network/Info zuletzt erfolgreich
- * @param {object[]} p.current   Geräte aus /Network/Info
+ * @param {boolean} p.connected  app's API reachable
+ * @param {boolean} p.readOk     GET /Network/Info last succeeded
+ * @param {object[]} p.current   devices from /Network/Info
  * @returns {{ count: number, names: string[], level: 'ok'|'error' }}
  */
 function networkStatus({ connected, readOk, current }) {

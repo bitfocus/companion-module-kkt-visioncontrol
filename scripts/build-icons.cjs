@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 /*
- * Erzeugt das komplette Icon Pack des Moduls aus einer gemeinsamen
- * Glyphen-Bibliothek (scripts/iconpack/glyphs.cjs). Keine installierte App
- * nötig, läuft auf Windows, macOS und Linux.
+ * Generates the module's complete icon pack from a shared
+ * glyph library (scripts/iconpack/glyphs.cjs). No installed app
+ * required, runs on Windows, macOS and Linux.
  *
- *   node scripts/build-icons.cjs              SVG erzeugen, PNG rendern, bündeln
- *   node scripts/build-icons.cjs --svg <dir>  nur SVG-Quellen nach <dir> schreiben
- *   node scripts/build-icons.cjs --bundle     nur ./icons/*.png bündeln
+ *   node scripts/build-icons.cjs              generate SVG, render PNG, bundle
+ *   node scripts/build-icons.cjs --svg <dir>  only write SVG sources to <dir>
+ *   node scripts/build-icons.cjs --bundle     only bundle ./icons/*.png
  *
- * Ergebnis:
- *   icons/<name>-light.png / -dark.png   Steuer-Symbole als ganze Taste 72 × 72: Symbol
- *                                        28 px oben, darunter frei für den Text (weiß / fast schwarz)
- *   icons/tile_<id>.png / _active.png    Effekt- und Farbkacheln 72 × 72
- *   icons/overlay_fx<n>.png              durchsichtige Motiv-Ebenen 72 × 72
- *   src/icons.generated.json             alles als Base64 gebündelt
+ * Output:
+ *   icons/<name>-light.png / -dark.png   control icons as a full button 72 × 72: icon
+ *                                        28 px at the top, below free for text (white / near black)
+ *   icons/tile_<id>.png / _active.png    effect and color tiles 72 × 72
+ *   icons/overlay_fx<n>.png              transparent motif layers 72 × 72
+ *   src/icons.generated.json             everything bundled as Base64
  */
 const fs = require('fs')
 const path = require('path')
@@ -25,18 +25,18 @@ const ROOT = path.join(__dirname, '..')
 const OUT = path.join(ROOT, 'icons')
 const BUNDLE = path.join(ROOT, 'src', 'icons.generated.json')
 
-// ---- Design-Tokens ----------------------------------------------------------
-const TILE = 72 // Kachelgröße (Companion-Taste)
-const GLYPH = 32 // Glyphengröße auf Kachel und als Steuer-Symbol (gleiche Strichstärke)
-const RADIUS = 12 // Eckenradius der Kachel
+// ---- Design tokens ----------------------------------------------------------
+const TILE = 72 // Tile size (Companion button)
+const GLYPH = 32 // Glyph size on the tile and as control icon (same stroke width)
+const RADIUS = 12 // Corner radius of the tile
 const INK_LIGHT = '#FFFFFF'
 const INK_DARK = '#111111'
-const ACTIVE = '#FF7A00' // Rahmen "aktiv" (Veranstaltungstechnik König Orange)
-const BAND_ALPHA = 0.45 // Schriftstreifen unten
-const TILE_MAX_FONT = 18 // wie src/presets.js
-const TILE_TEXT_HEIGHT = 34 // Platz für den Text auf der Kachel, wie src/presets.js
-// Steuer-Symbol auf der Taste. Companion 5 skaliert Bilder auf die ganze Taste
-// ("fit"), daher liegt das Symbol bereits an seiner Stelle in einer 72er-Fläche.
+const ACTIVE = '#FF7A00' // "Active" frame (Veranstaltungstechnik König orange)
+const BAND_ALPHA = 0.45 // Text strip at the bottom
+const TILE_MAX_FONT = 18 // as in src/presets.js
+const TILE_TEXT_HEIGHT = 34 // Space for the text on the tile, as in src/presets.js
+// Control icon on the button. Companion 5 scales images to the full button
+// ("fit"), so the icon already sits in its place within a 72 px area.
 const BUTTON_GLYPH = 28
 const BUTTON_GLYPH_Y = 5
 
@@ -44,14 +44,14 @@ const hex = ([r, g, b]) => '#' + [r, g, b].map((v) => Math.max(0, Math.min(255, 
 const mix = ([r, g, b], f) => [r, g, b].map((v) => Math.round(f >= 0 ? v + (255 - v) * f : v * (1 + f)))
 const luminance = ([r, g, b]) => 0.299 * r + 0.587 * g + 0.114 * b
 
-// Tinte nach der Helligkeit der Fläche hinter der Glyphe (Mitte des Verlaufs)
+// Ink based on the brightness of the area behind the glyph (middle of the gradient)
 function inkFor(colors) {
 	const avg = colors.reduce((s, c) => s + luminance(c), 0) / colors.length
 	return avg > 165 ? INK_DARK : INK_LIGHT
 }
 
-// Glyphe aus dem 24er-Raster an Position/Größe setzen; weiße Tinte bekommt
-// einen weichen Schatten in derselben Form, damit sie auch auf Gelb trägt.
+// Place a glyph from the 24 grid at position/size; white ink gets
+// a soft shadow of the same shape so it still reads on yellow.
 function placeGlyph(draw, ink, x, y, size) {
 	const s = size / 24
 	const shadow = ink === INK_LIGHT ? `<g transform="translate(${x} ${y + 1.2}) scale(${s})" opacity="0.28">${draw('#000000')}</g>` : ''
@@ -62,14 +62,14 @@ function svgDoc(size, body) {
 	return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${body}</svg>`
 }
 
-// Steuer-Symbol als ganze Taste 72 × 72, durchsichtig, Symbol oben mittig
+// Control icon as a full button 72 × 72, transparent, icon centered at the top
 function controlSvg(key, ink) {
 	const s = BUTTON_GLYPH / 24
 	const x = (TILE - BUTTON_GLYPH) / 2
 	return svgDoc(TILE, `<g transform="translate(${x} ${BUTTON_GLYPH_Y}) scale(${s})">${CONTROL[key](ink)}</g>`)
 }
 
-// Kachel: Effektfarben als Verlauf, Glyphe mittig im oberen Feld, Schriftstreifen unten
+// Tile: effect colors as a gradient, glyph centered in the upper field, text strip at the bottom
 function tileSvg(colors, motif, { lines = 1, active = false } = {}) {
 	const stops = colors.length === 1 ? [mix(colors[0], 0.3), colors[0], mix(colors[0], -0.3)] : colors
 	const stopTags = stops.map((c, i) => `<stop offset="${i / (stops.length - 1)}" stop-color="${hex(c)}"/>`).join('')
@@ -86,14 +86,14 @@ function tileSvg(colors, motif, { lines = 1, active = false } = {}) {
 	)
 }
 
-// Motiv-Ebene ohne Hintergrund (Farbe setzt Companion), gleiche Lage wie auf der Kachel
+// Motif layer without background (Companion sets the color), same position as on the tile
 function overlaySvg(motif) {
 	const field = TILE - 22
 	const glyph = motif ? placeGlyph(MOTIF[motif], INK_LIGHT, (TILE - GLYPH) / 2, (field - GLYPH) / 2, GLYPH) : ''
 	return svgDoc(TILE, `${glyph}<rect x="0" y="${field}" width="${TILE}" height="22" fill="#000000" fill-opacity="${BAND_ALPHA}"/>`)
 }
 
-// Alle Grafiken des Packs: Dateiname -> SVG
+// All graphics of the pack: file name -> SVG
 function buildAll() {
 	const out = {}
 	for (const key of Object.keys(CONTROL)) {
@@ -123,7 +123,7 @@ function bundle() {
 		data[f.replace(/\.png$/, '')] = fs.readFileSync(path.join(OUT, f)).toString('base64')
 	}
 	fs.writeFileSync(BUNDLE, JSON.stringify(data))
-	console.log(`${Object.keys(data).length} Grafiken gebündelt in ${path.relative(ROOT, BUNDLE)}`)
+	console.log(`${Object.keys(data).length} graphics bundled into ${path.relative(ROOT, BUNDLE)}`)
 }
 
 function main() {
@@ -135,7 +135,7 @@ function main() {
 		const dir = path.resolve(args[1] || path.join(ROOT, 'icons-svg'))
 		fs.mkdirSync(dir, { recursive: true })
 		for (const [name, svg] of Object.entries(all)) fs.writeFileSync(path.join(dir, `${name}.svg`), svg)
-		console.log(`${Object.keys(all).length} SVG-Quellen in ${dir}`)
+		console.log(`${Object.keys(all).length} SVG sources in ${dir}`)
 		return
 	}
 
@@ -147,7 +147,7 @@ function main() {
 		const png = new Resvg(svg, { fitTo: { mode: 'width', value: size }, font: { loadSystemFonts: false } }).render().asPng()
 		fs.writeFileSync(path.join(OUT, `${name}.png`), png)
 	}
-	console.log(`${Object.keys(all).length} Grafiken gerendert in icons/`)
+	console.log(`${Object.keys(all).length} graphics rendered to icons/`)
 	bundle()
 }
 

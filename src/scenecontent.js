@@ -1,18 +1,18 @@
-// Ersatz für die defekte Szenen-API (Vision Control 2.17.3 / 2.18.4):
-// Übersetzt eine gespeicherte Szene aus den lokalen Szenendateien der App in
-// Steuerbefehle für POST /Control.
+// Fallback for the broken scene API (Vision Control 2.17.3 / 2.18.4):
+// Translates a saved scene from the app's local scene files into
+// control commands for POST /Control.
 //
-// Aufbau einer gespeicherten Szene (CreativeScene): Groups[GroupID][Komponente],
-// je Gruppe 56 Plätze, leer = nicht gesetzt. Belegt nach Abgleich mit GET /Control:
-//   4      Master-Dimmer (StaticIQComponent, Value 0..65535)
-//   37–39  Rot, Grün, Blau – fest (StaticIQComponent) oder als Effekt
-//          (FxIQComponent: Schritte Item1 = Wert 0..255, Item2 = Stehzeit,
-//          Item3 = Überblendzeit, dazu Effect/Trigger/Repeat/TimeMultiplier)
-//   35     ersetzt den Dimmer nur, wenn Platz 4 fehlt. Ohne beides setzt die
-//          App den Dimmer auf 100 %. Abgleich mit dem Szenenstart in der App
+// Structure of a saved scene (CreativeScene): Groups[GroupID][component],
+// 56 slots per group, empty = not set. Mapped after comparing with GET /Control:
+//   4      Master dimmer (StaticIQComponent, Value 0..65535)
+//   37–39  Red, Green, Blue – static (StaticIQComponent) or as an effect
+//          (FxIQComponent: steps Item1 = value 0..255, Item2 = stay time,
+//          Item3 = fade time, plus Effect/Trigger/Repeat/TimeMultiplier)
+//   35     replaces the dimmer only if slot 4 is missing. Without either, the
+//          app sets the dimmer to 100 %. Compared with starting the scene in the app
 //          (GET /Control): "White Line" (4 = 100 %, 35 = 85 %) → 100 %,
-//          "Red Dot" (nur 35 = 100 %) → 100 %, "Test 35" (beide 100 %) → 100 %.
-// Andere Plätze sind noch nicht zugeordnet und werden übersprungen.
+//          "Red Dot" (only 35 = 100 %) → 100 %, "Test 35" (both 100 %) → 100 %.
+// Other slots are not mapped yet and are skipped.
 
 const DIMMER = 4
 const RED = 37
@@ -41,7 +41,7 @@ function trigger(t = {}) {
 	}
 }
 
-/** Rot/Grün/Blau-Komponenten zu einem RGB-Inhalt für POST /Control zusammenführen */
+/** Merge red/green/blue components into one RGB content for POST /Control */
 function rgbContent(r, g, b) {
 	const chans = [r, g, b]
 	if (!chans.some(Boolean)) return null
@@ -51,7 +51,7 @@ function rgbContent(r, g, b) {
 		return { Default: false, Value: { Value1: v(r), Value2: v(g), Value3: v(b) }, Fx: null }
 	}
 	const steps = Math.max(...chans.filter(isFx).map((c) => c.Scene.Scene.length))
-	// Wert eines Kanals in Schritt i: Effekt-Schritt, sonst fester Wert (16 → 8 Bit)
+	// Value of a channel in step i: effect step, otherwise static value (16 → 8 bit)
 	const val = (c, i) => {
 		if (isFx(c)) {
 			const s = c.Scene.Scene[i] || c.Scene.Scene[c.Scene.Scene.length - 1]
@@ -80,14 +80,14 @@ function rgbContent(r, g, b) {
 			},
 			Trigger: trigger(lead.Trigger),
 			Repeat: byte(lead.Repeat ?? 255),
-			// Nie 0: dann bleibt der Effekt stehen
+			// Never 0: the effect would freeze
 			TimeMultiplier: Math.max(1, byte(lead.TimeMultiplier)),
 		},
 	}
 }
 
 /**
- * @param {object} scene  CreativeScene aus IQIQCreativeScenes.json
+ * @param {object} scene  CreativeScene from IQIQCreativeScenes.json
  * @returns {{ groups: {GroupID:number, Content:object}[], fade: number, skipped: number[] }}
  */
 function sceneToControl(scene) {
@@ -101,7 +101,7 @@ function sceneToControl(scene) {
 		const content = {}
 		const rgb = rgbContent(comps[RED], comps[GREEN], comps[BLUE])
 		if (rgb) content.RGB = rgb
-		// Dimmer wie die App: Platz 4, sonst Platz 35, sonst voll
+		// Dimmer like the app: slot 4, otherwise slot 35, otherwise full
 		const dim = comps[DIMMER] || comps[DIMMER_FALLBACK]
 		if (dim && isFx(dim)) skipped.add(comps[DIMMER] ? DIMMER : DIMMER_FALLBACK)
 		else if (dim) content.MasterDimmer = { Default: false, Value: word(dim.Value), Fx: null }
@@ -111,7 +111,7 @@ function sceneToControl(scene) {
 	return { groups, fade: byte(scene && scene.Infade), skipped: [...skipped].sort((a, b) => a - b) }
 }
 
-/** Inhalt zum Ausschalten: Master-Dimmer der betroffenen Gruppen auf 0 */
+/** Content for switching off: master dimmer of the affected groups to 0 */
 function sceneOffControl(scene) {
 	const { groups } = sceneToControl(scene)
 	return {
@@ -120,7 +120,7 @@ function sceneOffControl(scene) {
 	}
 }
 
-/** Vergleichsschlüssel für Farbe/Effekt; Tempo und Dimmer zählen nicht mit */
+/** Comparison key for color/effect; speed and dimmer do not count */
 function colorKey(rgb) {
 	if (!rgb) return null
 	if (rgb.Fx) return 'fx|' + fingerprintOfFx(rgb.Fx)
@@ -129,9 +129,9 @@ function colorKey(rgb) {
 }
 
 /**
- * Läuft diese Szene gerade? Wahr, wenn in allen Gruppen der Szene genau ihre
- * Farbe bzw. ihr Farbeffekt im Programmer steht (GET /Control). Helligkeit und
- * Tempo dürfen abweichen, z. B. nach dem Drehregler.
+ * Is this scene currently running? True if all groups of the scene have exactly its
+ * color or its color effect in the programmer (GET /Control). Brightness and
+ * speed may differ, e.g. after using the rotary encoder.
  */
 function sceneMatches(scene, programmer) {
 	if (!scene || !programmer) return false
