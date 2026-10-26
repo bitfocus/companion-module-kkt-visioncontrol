@@ -5,3 +5,8 @@ pkg/
 .yarn/
 .pnp.*
 dist/
+package-lock.json
+/pkg
+/*.tgz
+DEBUG-*
+/.yarn
