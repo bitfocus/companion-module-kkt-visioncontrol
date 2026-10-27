@@ -15,12 +15,20 @@ module.exports = function (self) {
 		{ variableId: 'network_devices', name: 'Devices in the network (count, including switched-off ones)' },
 		{ variableId: 'network_device_names', name: 'Devices in the network (names with end of serial number)' },
 		{ variableId: 'app_reachable', name: 'App reachable (yes/no)' },
+		{ variableId: 'group_count', name: 'Number of groups' },
 	]
 	// Per scene: name from the app and active state (automatically follow renames)
 	for (const s of self.scenes || []) {
 		defs.push({ variableId: `scene_${s.ItemId}_name`, name: `Scene ${s.ItemId}: Name (${sceneName(s)})` })
 		defs.push({ variableId: `scene_${s.ItemId}_label`, name: `Scene ${s.ItemId}: Name for buttons (wrapped, size 14)` })
 		defs.push({ variableId: `scene_${s.ItemId}_active`, name: `Scene ${s.ItemId}: active (true/false)` })
+	}
+	// Per group: name, brightness and running effect
+	for (const g of self.groups || []) {
+		defs.push({ variableId: `group_${g.id}_name`, name: `Group ${g.id}: Name (${g.name})` })
+		defs.push({ variableId: `group_${g.id}_short`, name: `Group ${g.id}: Name for buttons (one line, size 14)` })
+		defs.push({ variableId: `group_${g.id}_dimmer`, name: `Group ${g.id}: Brightness` })
+		defs.push({ variableId: `group_${g.id}_effect`, name: `Group ${g.id}: Active effect` })
 	}
 	self.setVariableDefinitions(defs)
 }

@@ -7,6 +7,7 @@ A [Bitfocus Companion](https://bitfocus.io/companion) module for the **Vision Co
 ## Features
 
 - Set color and dimmer for groups or single fixtures (with fade), blackout
+- **Groups from the app:** every action and feedback picks its group from a dropdown; brightness per group with its own presets and variables
 - Effect catalog with 38 ready-made effects (matrix and device pixels, fitness studio concept), individual values can be overridden
 - Build effects freely: pattern, geometry, colors, speed, range, trigger (Tap, Beat, Pulse)
 - Adjust the running effect: faster, slower, brighter, darker, range

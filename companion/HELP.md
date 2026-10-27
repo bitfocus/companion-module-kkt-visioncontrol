@@ -21,6 +21,16 @@ Controls the **Vision Control app** (KKT Künzler Technologies) through its loca
 
 The module logs in automatically, renews the token before it expires and automatically retries commands after a known, sporadic app error.
 
+## Groups
+
+The module reads the groups created in the app from `GET /Network/Info` and keeps the list current (new, deleted or renamed groups appear automatically).
+
+- **Target:** every action and feedback has the fields *Target* (group or fixture) and *Group*. The group dropdown lists the app's groups by name; a custom GroupID or a variable such as `$(local:group)` can also be typed in. For *Fixture (RDMID)* the RDMID field is shown instead.
+- **Brightness per group:** for every group there is a preset folder *Group: <name>* with
+  - **Brightness** – rotary encoder: turn = brighter/darker (5 % per detent), press = blackout on/off; shows name, value and a bar (also usable on the touch display or a key)
+  - **Brighter** / **Darker** – keys with +10 % / −10 % per press
+- Buttons created before the group dropdown keep their GroupID; it is taken over into the dropdown automatically.
+
 ## Actions
 
 - **Scene / Sequence: On / Off / Toggle** – by item ID from the app's scene list
@@ -57,6 +67,7 @@ The matching presets are under *Rotary encoder (Stream Deck +)*:
 
 - **Brightness** – for row 4: turn right = brighter, left = darker (5 % per detent), press = blackout on/off
 - **Brightness fine** – the same with 1 % per detent
+- **Group: <name> → Brightness** – the same for one group of the app (see *Groups*)
 - **Brightness: display above the encoder** – for row 3, directly above the encoder: shows the dimmer symbol, an orange bar and the value in %; tap = blackout on/off, vertical swipe = brighter/darker
 
 Setup:
@@ -93,13 +104,16 @@ Step size and group can be changed in the button's actions. For your own buttons
 | `app_reachable` | `yes` / `no` – whether the app responds |
 | `scene_<ID>_name`, `scene_<ID>_active` | Name and state of every scene from the app |
 | `scene_<ID>_label` | Scene name for buttons, wrapped to fit (size 14) |
+| `group_<ID>_name`, `group_<ID>_short` | Name of every group from the app; `short` is cut to one line for buttons |
+| `group_<ID>_dimmer`, `group_<ID>_effect` | Brightness in % and running effect of every group |
+| `group_count` | Number of groups |
 | `connection`, `network_name`, `network_id`, `scene_count` | Connection and network |
 
 The presets under *Running effect* already show name, speed and brightness.
 
 ## Local variables
 
-All fields for the target ID (GroupID / RDMID) and the scene selection accept variables, including the button's **local variables**, e.g. `$(local:group)` or `$(this:…)`. This way a button can be built once and pointed at a different group or scene through a local variable. This applies to actions and to the feedbacks "Catalog effect is active", "Color is active", "Image of the active effect" and "Scene / Sequence is active".
+The group dropdown, the RDMID field and the scene selection accept variables, including the button's **local variables**, e.g. `$(local:group)` or `$(this:…)`. This way a button can be built once and pointed at a different group or scene through a local variable. This applies to actions and to the feedbacks "Catalog effect is active", "Color is active", "Image of the active effect" and "Scene / Sequence is active".
 
 ## Notes
 

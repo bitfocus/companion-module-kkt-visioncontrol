@@ -111,10 +111,19 @@ function fitLabel(text, maxSize = 24, maxHeight = 72) {
 	return { size: String(small), lines }
 }
 
+/** One line at the given size; cut with "…" if it is too wide (e.g. above a value) */
+function shortLabel(text, size = 14) {
+	const t = String(text ?? '').trim()
+	if (textWidth(t, size) <= MAX_WIDTH) return t
+	let cut = t
+	while (cut.length > 1 && textWidth(cut.trimEnd() + '…', size) > MAX_WIDTH) cut = cut.slice(0, -1)
+	return cut.trimEnd() + '…'
+}
+
 /** Text with explicit line breaks so Companion wraps exactly like this */
 function labelText(text, maxSize = 24, maxHeight = 72) {
 	const fit = fitLabel(text, maxSize, maxHeight)
 	return { text: fit.lines.join('\n'), size: fit.size, lineCount: fit.lines.length }
 }
 
-module.exports = { fitLabel, labelText, textWidth, textHeight, SIZES, MAX_WIDTH }
+module.exports = { fitLabel, labelText, shortLabel, textWidth, textHeight, SIZES, MAX_WIDTH }

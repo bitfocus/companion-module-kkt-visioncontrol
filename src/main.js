@@ -9,7 +9,8 @@ const { sceneName, scenesSignature } = require('./scenes')
 const { networkStatus } = require('./devices')
 const { readLocalScenes, readLocalSceneDetail, watchLocalScenes } = require('./localscenes')
 const { sceneToControl, sceneOffControl, sceneMatches } = require('./scenecontent')
-const { labelText } = require('./labels')
+const { labelText, shortLabel } = require('./labels')
+const { normalizeGroups, groupsSignature } = require('./groups')
 
 const REQUEST_TIMEOUT_MS = 5000
 const MAX_TRANSIENT_RETRIES = 3
@@ -36,6 +37,8 @@ class VisionControlInstance extends InstanceBase {
 		this.scenesReadError = null
 		this.devices = [] // network devices from GET /Network/Info (including switched-off ones)
 		this.devicesReadOk = false
+		this.groups = [] // groups from GET /Network/Info: [{ id, name }]
+		this.groupsSig = '' // comparison key of the group list
 		this.dimPending = {} // 'group:0' -> { value, at } last brightness value from the rotary encoder
 		this.dimSending = {} // 'group:0' -> true while a brightness command is in flight
 		this.dimMemory = {} // 'group:0' -> brightness before the blackout
@@ -323,10 +326,7 @@ class VisionControlInstance extends InstanceBase {
 		const sig = scenesSignature(this.scenes)
 		if (sig !== this.scenesSig) {
 			this.scenesSig = sig
-			this.updateActions()
-			this.updateFeedbacks()
-			this.updateVariableDefinitions()
-			this.updatePresets()
+			this.updateDefinitions()
 		}
 	}
 
@@ -339,9 +339,20 @@ class VisionControlInstance extends InstanceBase {
 			sceneVars[`scene_${s.ItemId}_label`] = labelText(sceneName(s), 14, 36).text
 			sceneVars[`scene_${s.ItemId}_active`] = s.Active ? 'true' : 'false'
 		}
+		// Per group: name, brightness and running effect
+		const groupVars = {}
+		for (const g of this.groups || []) {
+			const ga = this.activeFor('group', g.id)
+			groupVars[`group_${g.id}_name`] = g.name
+			groupVars[`group_${g.id}_short`] = shortLabel(g.name, 14)
+			groupVars[`group_${g.id}_dimmer`] = `${Math.round((this.dimmerNow('group', g.id) / DIM_FULL) * 100)} %`
+			groupVars[`group_${g.id}_effect`] = ga.name
+		}
 		const net = this.networkStatusNow()
 		this.setVariableValues({
 			...sceneVars,
+			...groupVars,
+			group_count: Array.isArray(this.groups) ? this.groups.length : 0,
 			network_devices: String(net.count),
 			network_device_names: net.names.length ? net.names.join(', ') : '–',
 			app_reachable: net.level === 'ok' ? 'yes' : 'no',
@@ -371,6 +382,13 @@ class VisionControlInstance extends InstanceBase {
 		const info = await res.json()
 		this.devices = Array.isArray(info.Fixtures) ? info.Fixtures : []
 		this.devicesReadOk = true
+		this.groups = normalizeGroups(info.Groups)
+		// New, deleted or renamed groups: rebuild dropdowns, variables and presets
+		const sig = groupsSignature(this.groups)
+		if (sig !== this.groupsSig) {
+			this.groupsSig = sig
+			this.updateDefinitions()
+		}
 	}
 
 	networkStatusNow() {
@@ -593,6 +611,15 @@ class VisionControlInstance extends InstanceBase {
 	}
 
 	// ---- Load definitions -----------------------------------------------------
+
+	/** Rebuild everything that lists scenes or groups */
+	updateDefinitions() {
+		this.updateActions()
+		this.updateFeedbacks()
+		this.updateVariableDefinitions()
+		this.updatePresets()
+		this.updateVariables()
+	}
 
 	updateActions() {
 		UpdateActions(this)

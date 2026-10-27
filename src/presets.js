@@ -61,7 +61,7 @@ module.exports = function (self) {
 		category: 'Control',
 		name: 'Blackout (Group 0)',
 		style: look('Blackout', [0, 0, 0], 'blackout'),
-		steps: [{ down: [{ actionId: 'blackout', options: { target: 'group', id: GROUP, fade: 10 } }], up: [] }],
+		steps: [{ down: [{ actionId: 'blackout', options: { target: 'group', group: GROUP, fade: 10 } }], up: [] }],
 		feedbacks: [],
 	}
 
@@ -73,7 +73,7 @@ module.exports = function (self) {
 		steps: [
 			{
 				down: [
-					{ actionId: 'set_color', options: { target: 'group', id: GROUP, useColor: true, color: WHITE, useDimmer: true, dimmer: 100, fade: 5 } },
+					{ actionId: 'set_color', options: { target: 'group', group: GROUP, useColor: true, color: WHITE, useDimmer: true, dimmer: 100, fade: 5 } },
 				],
 				up: [],
 			},
@@ -99,7 +99,7 @@ module.exports = function (self) {
 			category: 'Dimmer',
 			name: `Dimmer ${pct} %`,
 			style: look(`${pct}%`, [shade, shade, shade], 'dimmer'),
-			steps: [{ down: [{ actionId: 'set_dimmer', options: { target: 'group', id: GROUP, dimmer: pct, fade: 10 } }], up: [] }],
+			steps: [{ down: [{ actionId: 'set_dimmer', options: { target: 'group', group: GROUP, dimmer: pct, fade: 10 } }], up: [] }],
 			feedbacks: [],
 		}
 	}
@@ -118,13 +118,13 @@ module.exports = function (self) {
 					down: [
 						{
 							actionId: 'set_color',
-							options: { target: 'group', id: GROUP, useColor: true, color: combineRgb(r, g, b), useDimmer: true, dimmer: 100, fade: 0 },
+							options: { target: 'group', group: GROUP, useColor: true, color: combineRgb(r, g, b), useDimmer: true, dimmer: 100, fade: 0 },
 						},
 					],
 					up: [],
 				},
 			],
-			feedbacks: [{ feedbackId: 'color_active', options: { color: c.key, target: 'group', id: GROUP }, style: activeStyle(`color_${c.key}`) }],
+			feedbacks: [{ feedbackId: 'color_active', options: { color: c.key, target: 'group', group: GROUP }, style: activeStyle(`color_${c.key}`) }],
 		}
 	}
 
@@ -143,7 +143,7 @@ module.exports = function (self) {
 							actionId: 'vision_effect',
 							options: {
 								target: 'group',
-								id: GROUP,
+								group: GROUP,
 								effect: e.id,
 								overrideDimmer: false,
 								dimmer: 100,
@@ -164,7 +164,7 @@ module.exports = function (self) {
 					up: [],
 				},
 			],
-			feedbacks: [{ feedbackId: 'effect_active', options: { effect: e.id, target: 'group', id: GROUP }, style: activeStyle(e.id) }],
+			feedbacks: [{ feedbackId: 'effect_active', options: { effect: e.id, target: 'group', group: GROUP }, style: activeStyle(e.id) }],
 		}
 	}
 
@@ -184,7 +184,7 @@ module.exports = function (self) {
 			category: 'Running effect',
 			name: a.name,
 			style: look(a.name, [40, 40, 40], a.icon),
-			steps: [{ down: [{ actionId: 'adjust_effect', options: { target: 'group', id: GROUP, what: a.key, percent: 20, rangeStep: 5 } }], up: [] }],
+			steps: [{ down: [{ actionId: 'adjust_effect', options: { target: 'group', group: GROUP, what: a.key, percent: 20, rangeStep: 5 } }], up: [] }],
 			feedbacks: [],
 		}
 	}
@@ -204,7 +204,7 @@ module.exports = function (self) {
 		},
 		steps: [{ down: [], up: [] }],
 		// Automatically takes on the tile of the running effect
-		feedbacks: [{ feedbackId: 'active_effect_image', options: { target: 'group', id: GROUP } }],
+		feedbacks: [{ feedbackId: 'active_effect_image', options: { target: 'group', group: GROUP } }],
 	}
 
 	presets['active_tempo'] = {
@@ -244,13 +244,13 @@ module.exports = function (self) {
 		},
 		steps: [
 			{
-				down: [{ actionId: 'dimmer_toggle', options: { target: 'group', id: GROUP, fade: 0 } }],
+				down: [{ actionId: 'dimmer_toggle', options: { target: 'group', group: GROUP, fade: 0 } }],
 				up: [],
-				rotate_left: [{ actionId: 'dimmer_step', options: { target: 'group', id: GROUP, step: -5 } }],
-				rotate_right: [{ actionId: 'dimmer_step', options: { target: 'group', id: GROUP, step: 5 } }],
+				rotate_left: [{ actionId: 'dimmer_step', options: { target: 'group', group: GROUP, step: -5 } }],
+				rotate_right: [{ actionId: 'dimmer_step', options: { target: 'group', group: GROUP, step: 5 } }],
 			},
 		],
-		feedbacks: [{ feedbackId: 'dimmer_level', options: { target: 'group', id: GROUP } }],
+		feedbacks: [{ feedbackId: 'dimmer_level', options: { target: 'group', group: GROUP } }],
 	}
 
 	presets['encoder_dimmer_fine'] = {
@@ -258,10 +258,10 @@ module.exports = function (self) {
 		name: 'Brightness fine (1 % per detent)',
 		steps: [
 			{
-				down: [{ actionId: 'dimmer_toggle', options: { target: 'group', id: GROUP, fade: 0 } }],
+				down: [{ actionId: 'dimmer_toggle', options: { target: 'group', group: GROUP, fade: 0 } }],
 				up: [],
-				rotate_left: [{ actionId: 'dimmer_step', options: { target: 'group', id: GROUP, step: -1 } }],
-				rotate_right: [{ actionId: 'dimmer_step', options: { target: 'group', id: GROUP, step: 1 } }],
+				rotate_left: [{ actionId: 'dimmer_step', options: { target: 'group', group: GROUP, step: -1 } }],
+				rotate_right: [{ actionId: 'dimmer_step', options: { target: 'group', group: GROUP, step: 1 } }],
 			},
 		],
 	}
@@ -272,6 +272,55 @@ module.exports = function (self) {
 	presets['encoder_dimmer_display'] = {
 		...presets['encoder_dimmer'],
 		name: 'Brightness: display above the encoder (tap = Blackout, swipe = brighter/darker)',
+	}
+
+	// ---- Groups: automatically from the app -------------------------------------
+	// One set per group: rotary encoder (also usable on the touch display or a key)
+	// and brighter/darker keys. Texts are variables, so renames in the app follow.
+
+	for (const g of Array.isArray(self.groups) ? self.groups : []) {
+		const gid = String(g.id)
+		const target = { target: 'group', group: gid }
+		const levelText = `$(${label}:group_${gid}_short)
+$(${label}:group_${gid}_dimmer)`
+		const category = `Group: ${g.name}`
+		presets[`group_${gid}_encoder`] = {
+			type: 'button',
+			category,
+			name: `${g.name}: brightness (turn = brighter/darker, press = Blackout on/off)`,
+			options: { rotaryActions: true },
+			style: {
+				text: levelText,
+				size: '14',
+				color: WHITE,
+				bgcolor: BLACK,
+				png64: icon('dimmer', 'light'),
+				pngalignment: 'center:top',
+				alignment: 'center:bottom',
+			},
+			steps: [
+				{
+					down: [{ actionId: 'dimmer_toggle', options: { ...target, fade: 0 } }],
+					up: [],
+					rotate_left: [{ actionId: 'dimmer_step', options: { ...target, step: -5 } }],
+					rotate_right: [{ actionId: 'dimmer_step', options: { ...target, step: 5 } }],
+				},
+			],
+			feedbacks: [{ feedbackId: 'dimmer_level', options: { ...target } }],
+		}
+		for (const step of [
+			{ key: 'up', name: 'brighter', pct: 10, icon: 'full_on' },
+			{ key: 'down', name: 'darker', pct: -10, icon: 'blackout' },
+		]) {
+			presets[`group_${gid}_dim_${step.key}`] = {
+				type: 'button',
+				category,
+				name: `${g.name}: ${step.name} (${step.pct > 0 ? '+' : ''}${step.pct} %)`,
+				style: { ...look('', [40, 40, 40], step.icon), text: levelText, size: '14' },
+				steps: [{ down: [{ actionId: 'dimmer_step', options: { ...target, step: step.pct } }], up: [] }],
+				feedbacks: [{ feedbackId: 'dimmer_level', options: { ...target } }],
+			}
+		}
 	}
 
 	// ---- Scenes: automatically from the app -------------------------------------

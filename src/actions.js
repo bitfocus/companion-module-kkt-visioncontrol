@@ -2,11 +2,9 @@ const { combineRgb } = require('@companion-module/base')
 const { CATALOG, CATALOG_BY_ID } = require('./effects-data')
 const { buildEffectContent } = require('./fx')
 const { sceneChoices } = require('./scenes')
+const { targetOptions, resolveTarget } = require('./groups')
 
 const CATALOG_CHOICES = CATALOG.map((e) => ({ id: e.id, label: `${e.cat}: ${e.name}` }))
-
-// Text fields also offer the button's local variables ($(local:…), $(this:…))
-const LOCAL_VARS = { local: true }
 
 // Timing in understandable units. Note: the API's raw TimeMultiplier is a
 // time factor (higher = slower, 0 = stopped); src/fx.js converts it.
@@ -46,11 +44,6 @@ function splitRgb(value) {
 const scale16 = (x) => Math.round((x / 255) * 65535)
 // Percent (0..100) -> 16-bit (0..65535)
 const pct16 = (p) => Math.round((Math.max(0, Math.min(100, p)) / 100) * 65535)
-
-const TARGETS = [
-	{ id: 'group', label: 'Group (GroupID)' },
-	{ id: 'fixture', label: 'Fixture (RDMID)' },
-]
 
 // EffectType enum (sent to the API as a number)
 const EFFECTS = [
@@ -109,6 +102,14 @@ module.exports = function (self) {
 		return id
 	}
 
+	// Target of an action: group from the dropdown or fixture by RDMID
+	const targetOpts = targetOptions(self.groups)
+	const targetOf = async (options, context) => {
+		const t = await resolveTarget(options, (text) => parse(context, text))
+		if (!Number.isFinite(t.id)) throw new Error(`Invalid ${t.target === 'fixture' ? 'RDMID' : 'GroupID'}`)
+		return t
+	}
+
 	self.setActionDefinitions({
 		scene_on: {
 			name: 'Scene / Sequence: On',
@@ -145,8 +146,7 @@ module.exports = function (self) {
 		set_color: {
 			name: 'Set color & dimmer',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 				{ id: 'useColor', type: 'checkbox', label: 'Set color', default: true },
 				{ id: 'color', type: 'colorpicker', label: 'Color', default: combineRgb(255, 0, 0) },
 				{ id: 'useDimmer', type: 'checkbox', label: 'Set dimmer', default: true },
@@ -154,7 +154,7 @@ module.exports = function (self) {
 				{ id: 'fade', type: 'number', label: 'Fade (0 = instant … 255 = max, not seconds)', default: 0, min: 0, max: 255 },
 			],
 			callback: async (event, context) => {
-				const id = Number(await parse(context, event.options.id))
+				const { target, id } = await targetOf(event.options, context)
 				const content = {}
 				if (event.options.useDimmer) {
 					content.MasterDimmer = { Default: false, Value: pct16(event.options.dimmer), Fx: null }
@@ -167,38 +167,36 @@ module.exports = function (self) {
 						Fx: null,
 					}
 				}
-				if (content.MasterDimmer) self.noteDimmer(event.options.target, id, content.MasterDimmer.Value)
-				await self.setControl(event.options.target, id, content, event.options.fade)
+				if (content.MasterDimmer) self.noteDimmer(target, id, content.MasterDimmer.Value)
+				await self.setControl(target, id, content, event.options.fade)
 			},
 		},
 
 		set_dimmer: {
 			name: 'Set dimmer',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 				{ id: 'dimmer', type: 'number', label: 'Dimmer %', default: 100, min: 0, max: 100 },
 				{ id: 'fade', type: 'number', label: 'Fade (0 = instant … 255 = max, not seconds)', default: 10, min: 0, max: 255 },
 			],
 			callback: async (event, context) => {
-				const id = Number(await parse(context, event.options.id))
+				const { target, id } = await targetOf(event.options, context)
 				const content = { MasterDimmer: { Default: false, Value: pct16(event.options.dimmer), Fx: null } }
-				self.noteDimmer(event.options.target, id, content.MasterDimmer.Value)
-				await self.setControl(event.options.target, id, content, event.options.fade)
+				self.noteDimmer(target, id, content.MasterDimmer.Value)
+				await self.setControl(target, id, content, event.options.fade)
 			},
 		},
 
 		blackout: {
 			name: 'Blackout (Dimmer 0)',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 				{ id: 'fade', type: 'number', label: 'Fade (0 = instant … 255 = max, not seconds)', default: 10, min: 0, max: 255 },
 			],
 			callback: async (event, context) => {
-				const id = Number(await parse(context, event.options.id))
-				self.noteDimmer(event.options.target, id, 0)
-				await self.setControl(event.options.target, id, { MasterDimmer: { Default: false, Value: 0, Fx: null } }, event.options.fade)
+				const { target, id } = await targetOf(event.options, context)
+				self.noteDimmer(target, id, 0)
+				await self.setControl(target, id, { MasterDimmer: { Default: false, Value: 0, Fx: null } }, event.options.fade)
 			},
 		},
 
@@ -206,13 +204,12 @@ module.exports = function (self) {
 			name: 'Brightness step by step (rotary encoder)',
 			description: 'For rotary encoders, e.g. Stream Deck +: turn left = negative step, right = positive. Fast turning is combined.',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 				{ id: 'step', type: 'number', label: 'Step in percentage points (negative = darker)', default: 5, min: -100, max: 100 },
 			],
 			callback: async (event, context) => {
-				const id = Number(await parse(context, event.options.id))
-				await self.stepDimmer(event.options.target, id, Number(event.options.step) || 0)
+				const { target, id } = await targetOf(event.options, context)
+				await self.stepDimmer(target, id, Number(event.options.step) || 0)
 			},
 		},
 
@@ -220,21 +217,19 @@ module.exports = function (self) {
 			name: 'Blackout on/off (remember brightness)',
 			description: 'Switches to 0 and, the next time, back to the previous brightness.',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 				{ id: 'fade', type: 'number', label: 'Fade (0 = instant … 255 = max, not seconds)', default: 0, min: 0, max: 255 },
 			],
 			callback: async (event, context) => {
-				const id = Number(await parse(context, event.options.id))
-				await self.toggleBlackout(event.options.target, id, event.options.fade)
+				const { target, id } = await targetOf(event.options, context)
+				await self.toggleBlackout(target, id, event.options.fade)
 			},
 		},
 
 		color_chase: {
 			name: 'Effect: Color change (RGB Fx)',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 				{ id: 'c1', type: 'colorpicker', label: 'Color 1', default: combineRgb(255, 0, 0) },
 				{ id: 'c2', type: 'colorpicker', label: 'Color 2', default: combineRgb(0, 255, 0) },
 				{ id: 'c3', type: 'colorpicker', label: 'Color 3', default: combineRgb(0, 0, 255) },
@@ -242,21 +237,20 @@ module.exports = function (self) {
 			],
 			callback: async (event, context) => {
 				const o = event.options
-				const id = Number(await parse(context, o.id))
+				const { target, id } = await targetOf(o, context)
 				const rgb = (c) => {
 					const { r, g, b } = splitRgb(c)
 					return [r, g, b]
 				}
 				const content = buildEffectContent({ colors: [rgb(o.c1), rgb(o.c2), rgb(o.c3)], effect: 0, geometry: 0, ...timingFrom(o) })
-				await self.setControl(o.target, id, content, 0)
+				await self.setControl(target, id, content, 0)
 			},
 		},
 
 		rgb_effect: {
 			name: 'Effect: Pattern & Geometry (Pixel / Matrix)',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 				{ id: 'effect', type: 'dropdown', label: 'Pattern', default: 20, choices: EFFECTS },
 				{ id: 'geometry', type: 'dropdown', label: 'Geometry', default: 2, choices: GEOMETRY },
 				{ id: 'c1', type: 'colorpicker', label: 'Color 1', default: combineRgb(255, 0, 0) },
@@ -277,7 +271,7 @@ module.exports = function (self) {
 			],
 			callback: async (event, context) => {
 				const o = event.options
-				const id = Number(await parse(context, o.id))
+				const { target, id } = await targetOf(o, context)
 				const rgb = (c) => {
 					const { r, g, b } = splitRgb(c)
 					return [r, g, b]
@@ -300,15 +294,14 @@ module.exports = function (self) {
 							? { start: 3, min: 0, max: 255, threshold: o.threshold, eqStart: o.eqStart, eqLength: o.eqLength }
 							: { start: trig, adaptBpm: trig === 2 && o.adaptBpm },
 				})
-				await self.setControl(o.target, id, content, 0)
+				await self.setControl(target, id, content, 0)
 			},
 		},
 
 		vision_effect: {
 			name: 'Effect from catalog (incl. fitness studio)',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 				{ id: 'effect', type: 'dropdown', label: 'Effect', default: CATALOG[0].id, choices: CATALOG_CHOICES },
 				{ id: 'overrideDimmer', type: 'checkbox', label: 'Override brightness', default: false },
 				{ id: 'dimmer', type: 'number', label: 'Brightness %', default: 100, min: 0, max: 100, ...visibleIf('overrideDimmer') },
@@ -328,7 +321,7 @@ module.exports = function (self) {
 				const o = event.options
 				const base = CATALOG_BY_ID[o.effect]
 				if (!base) throw new Error(`Unknown catalog effect: ${o.effect}`)
-				const id = Number(await parse(context, o.id))
+				const { target, id } = await targetOf(o, context)
 				const entry = { ...base }
 				if (o.overrideDimmer) entry.dimmer = o.dimmer
 				if (o.overrideTiming) Object.assign(entry, { sec: Number(o.sec), soft: (Number(o.soft) || 0) / 100 })
@@ -343,16 +336,15 @@ module.exports = function (self) {
 				}
 				if (o.reverse) entry.reverse = true
 				const content = buildEffectContent(entry)
-				await self.setControl(o.target, id, content, 0)
-				self.markSent(o.target, id, base.id, entry)
+				await self.setControl(target, id, content, 0)
+				self.markSent(target, id, base.id, entry)
 			},
 		},
 
 		adjust_effect: {
 			name: 'Adjust running effect (speed, brightness, range)',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 				{
 					id: 'what',
 					type: 'dropdown',
@@ -372,8 +364,8 @@ module.exports = function (self) {
 			],
 			callback: async (event, context) => {
 				const o = event.options
-				const id = Number(await parse(context, o.id))
-				await self.adjustActive(o.target, id, o.what, Number(o.percent) || 20, Number(o.rangeStep) || 5)
+				const { target, id } = await targetOf(o, context)
+				await self.adjustActive(target, id, o.what, Number(o.percent) || 20, Number(o.rangeStep) || 5)
 			},
 		},
 

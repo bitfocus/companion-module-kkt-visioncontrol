@@ -27,4 +27,22 @@ function fastPollDefault(_context, props) {
 	return result
 }
 
-module.exports = [pollIntervalTo1000, fastPollDefault]
+/**
+ * Group dropdown: actions and feedbacks used to take the GroupID in the text
+ * field `id`. Copy it into the new `group` field (custom values and variables
+ * stay valid); `id` remains the RDMID for fixtures.
+ */
+function groupDropdown(_context, props) {
+	const result = { updatedConfig: null, updatedActions: [], updatedFeedbacks: [] }
+	const migrate = (item, list) => {
+		const o = item.options
+		if (!o || o.target === undefined || o.group !== undefined) return
+		o.group = String(o.id ?? '0')
+		list.push(item)
+	}
+	for (const a of props.actions || []) migrate(a, result.updatedActions)
+	for (const f of props.feedbacks || []) migrate(f, result.updatedFeedbacks)
+	return result
+}
+
+module.exports = [pollIntervalTo1000, fastPollDefault, groupDropdown]

@@ -2,9 +2,9 @@ const { combineRgb } = require('@companion-module/base')
 const { CATALOG, CATALOG_BY_ID, COLORS } = require('./effects-data')
 const { tile, overlay, icon } = require('./icons')
 const { sceneChoices } = require('./scenes')
+const { targetOptions, resolveTarget } = require('./groups')
 
 const BLACK = combineRgb(0, 0, 0)
-const LOCAL_VARS = { local: true }
 
 /**
  * Button style with the image of the active effect.
@@ -36,10 +36,6 @@ function activeImageStyle(a) {
 	return style
 }
 
-const TARGETS = [
-	{ id: 'group', label: 'Group (GroupID)' },
-	{ id: 'fixture', label: 'Fixture (RDMID)' },
-]
 const ORANGE = combineRgb(255, 122, 0)
 const WHITE = combineRgb(255, 255, 255)
 // Colors for the app's reachability
@@ -75,6 +71,13 @@ function UpdateFeedbacks(self) {
 		context && typeof context.parseVariablesInString === 'function'
 			? context.parseVariablesInString(String(text ?? ''))
 			: self.parseVariablesInString(String(text ?? ''))
+
+	// Target of a feedback as [target, id]; an invalid ID falls back to group 0
+	const targetOpts = targetOptions(self.groups)
+	const targetOf = async (options, context) => {
+		const t = await resolveTarget(options, (text) => parse(context, text))
+		return Number.isFinite(t.id) ? [t.target, t.id] : [t.target, 0]
+	}
 
 	self.setFeedbackDefinitions({
 		scene_active: {
@@ -120,12 +123,11 @@ function UpdateFeedbacks(self) {
 			defaultStyle: { bgcolor: ORANGE, color: WHITE },
 			options: [
 				{ id: 'effect', type: 'dropdown', label: 'Effect', default: CATALOG[0].id, choices: CATALOG.map((e) => ({ id: e.id, label: `${e.cat}: ${e.name}` })) },
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 			],
 			callback: async (feedback, context) => {
 				const o = feedback.options
-				return self.activeFor(o.target, Number(await parse(context, o.id)) || 0).id === o.effect
+				return self.activeFor(...(await targetOf(o, context))).id === o.effect
 			},
 		},
 
@@ -134,12 +136,11 @@ function UpdateFeedbacks(self) {
 			description: 'Automatically shows the tile of the running effect or running color.',
 			type: 'advanced',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 			],
 			callback: async (feedback, context) => {
 				const o = feedback.options
-				return activeImageStyle(self.activeFor(o.target, Number(await parse(context, o.id)) || 0))
+				return activeImageStyle(self.activeFor(...(await targetOf(o, context))))
 			},
 		},
 
@@ -148,13 +149,11 @@ function UpdateFeedbacks(self) {
 			description: 'Draws the current brightness as a bar, e.g. for the rotary encoder on the Stream Deck +.',
 			type: 'advanced',
 			options: [
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 			],
 			callback: async (feedback, context) => {
 				const o = feedback.options
-				const id = Number(await parse(context, o.id)) || 0
-				return levelBar(self.dimmerNow(o.target, id) / 65535)
+				return levelBar(self.dimmerNow(...(await targetOf(o, context))) / 65535)
 			},
 		},
 
@@ -177,12 +176,11 @@ function UpdateFeedbacks(self) {
 			defaultStyle: { bgcolor: ORANGE, color: WHITE },
 			options: [
 				{ id: 'color', type: 'dropdown', label: 'Color', default: COLORS[0].key, choices: COLORS.map((c) => ({ id: c.key, label: c.name })) },
-				{ id: 'target', type: 'dropdown', label: 'Target', default: 'group', choices: TARGETS },
-				{ id: 'id', type: 'textinput', label: 'GroupID / RDMID', default: '0', useVariables: LOCAL_VARS },
+				...targetOpts,
 			],
 			callback: async (feedback, context) => {
 				const o = feedback.options
-				return self.activeFor(o.target, Number(await parse(context, o.id)) || 0).id === `color:${o.color}`
+				return self.activeFor(...(await targetOf(o, context))).id === `color:${o.color}`
 			},
 		},
 	})
