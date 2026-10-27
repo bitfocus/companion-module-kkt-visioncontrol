@@ -8,7 +8,7 @@ A [Bitfocus Companion](https://bitfocus.io/companion) module for the **Vision Co
 
 - Set color and dimmer for groups or single fixtures (with fade), blackout
 - **Groups from the app:** every action and feedback picks its group from a dropdown; brightness per group with its own presets and variables
-- Effect catalog with 38 ready-made effects (matrix and device pixels, fitness studio concept), individual values can be overridden
+- Effect catalog with 50 ready-made effects (matrix and device pixels, fitness studio concept, Hyrox race and all eight stations), individual values can be overridden
 - Build effects freely: pattern, geometry, colors, speed, range, trigger (Tap, Beat, Pulse)
 - Adjust the running effect: faster, slower, brighter, darker, range
 - **Rotary encoders (Stream Deck +):** turn = brightness, press = blackout on/off, bar on the display
@@ -38,7 +38,7 @@ own Node runtime; `node_modules` only has to exist in the module folder.
 
 All preset graphics come from a dedicated icon pack with one visual language:
 control symbols (Blackout, Full On, Dimmer, Scene, Sequence, Speed, Range,
-Status …), effect tiles and color tiles. Every preset button carries a symbol
+Status …), effect tiles and color tiles, including one motif per Hyrox discipline. Every preset button carries a symbol
 from the pack.
 
 ![All preset buttons with the icon pack](docs/iconpack-preview.png)

@@ -134,8 +134,8 @@ module.exports = function (self) {
 		presets[`fx_${e.id}`] = {
 			type: 'button',
 			category: e.cat,
-			name: `${e.cat}: ${e.name}`,
-			style: tileLook(e.name, e.id, e.colors[0]),
+			name: `${e.cat}: ${e.station ? `${e.station} ` : ''}${e.name}`,
+			style: tileLook(e.label || e.name, e.id, e.colors[0]),
 			steps: [
 				{
 					down: [

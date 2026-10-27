@@ -52,6 +52,19 @@ The module reads the groups created in the app from `GET /Network/Info` and keep
 - *Device patterns* – whole devices are the cells of the pattern
 - *Fitness: Areas* – Reception, Cardio, Strength, Athletics, Stretch, Wellness
 - *Fitness: Classes* – Warm-up, Spinning (Beat), HIIT, Power Beat (bass pulse), Dance (Beat), Break, Cool-down, Yoga, Finish
+- *Hyrox: Race* – Start (countdown red → yellow → green), Run 1 km (yellow arrows running forward), Roxzone (transition, snake), Finish (yellow/black checkered flag)
+- *Hyrox: Stations* – in race order, each with its own motif, pattern and colors that follow the movement:
+
+| # | Station | Light |
+|---|---------|-------|
+| 1 | SkiErg | ice blue rain running downwards like the double-pole pull |
+| 2 | Sled Push | heavy red wall pushed forward, slow |
+| 3 | Sled Pull | orange/purple wall pulled back towards the athlete |
+| 4 | Burpee Broad Jumps | fast yellow/black/white arrows jumping upwards |
+| 5 | Rowing | blue/turquoise split wall moving out and back with the stroke |
+| 6 | Farmers Carry | green walls in a steady walking rhythm |
+| 7 | Sandbag Lunges | sand-colored halves alternating like left and right leg |
+| 8 | Wall Balls | yellow/pink rings to the target and back |
 
 ## Stream Deck + (rotary encoders)
 

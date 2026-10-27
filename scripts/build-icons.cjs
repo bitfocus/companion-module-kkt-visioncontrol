@@ -102,7 +102,7 @@ function buildAll() {
 	}
 	for (const e of CATALOG) {
 		const motif = motifFor(e) || 'cycle'
-		const lines = labelText(e.name, TILE_MAX_FONT, TILE_TEXT_HEIGHT).lineCount
+		const lines = labelText(e.label || e.name, TILE_MAX_FONT, TILE_TEXT_HEIGHT).lineCount
 		out[`tile_${e.id}`] = tileSvg(e.colors, motif, { lines })
 		out[`tile_${e.id}_active`] = tileSvg(e.colors, motif, { lines, active: true })
 	}

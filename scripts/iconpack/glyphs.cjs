@@ -98,6 +98,37 @@ const MOTIF = {
 	bricksDiag1: (k) => rect(14, 15, 7, 5, 1.2, k) + rect(8.5, 9.5, 7, 5, 1.2, k) + rect(3, 4, 7, 5, 1.2, k),
 	bricksDiag2: (k) => rect(3, 15, 7, 5, 1.2, k) + rect(8.5, 9.5, 7, 5, 1.2, k) + rect(14, 4, 7, 5, 1.2, k),
 	police: (k) => line('M7 16.5v-4.5a5 5 0 0 1 10 0v4.5', k) + box(4.5, 16.5, 15, 4, 1.2, k) + line('M12 2.5v2M4.6 5.6l1.4 1.4M19.4 5.6 18 7M2.5 11.5h2M19.5 11.5h2', k),
+
+	// ---- Hyrox (race and the eight stations) -----------------------------------
+	// Start: stopwatch
+	hxStart: (k) => circle(12, 13.5, 7.5, k) + line('M10 3h4M12 3v3M18 7.5l1.5-1.5M12 13.5V9.5M12 13.5l2.8 2', k),
+	// Run: runner in stride
+	hxRun: (k) => dot(15.5, 4.2, 2.2, k) + line('M14 8.5 11 14M11 14l3.5 2.5-1 4.5M11 14l-3 2.5H4.5M13.8 8.8l3.4 3 2.8-.8M13.8 8.8 9.5 8.5 7.5 11', k),
+	// Roxzone: transition zone, the arrow passes through the gate
+	hxRoxzone: (k) => line('M6 4.5H4.5v15H6M18 4.5h1.5v15H18', k) + line('M3 12h16M15 8l4 4-4 4', k),
+	// Finish: checkered flag
+	hxFinish: (k) =>
+		line('M5 21V3.5', k) +
+		rect(5, 4, 14, 10, 1, k) +
+		box(5, 4, 3.5, 3.33, 0.5, k) + box(12, 4, 3.5, 3.33, 0.5, k) +
+		box(8.5, 7.33, 3.5, 3.33, 0.5, k) + box(15.5, 7.33, 3.5, 3.33, 0.5, k) +
+		box(5, 10.67, 3.5, 3.33, 0.5, k) + box(12, 10.67, 3.5, 3.33, 0.5, k),
+	// SkiErg: two handles pulled down from the top
+	hxSkiErg: (k) => line('M4 3.5h16M8 3.5v7M16 3.5v7', k) + box(6.5, 10.5, 3, 5, 1.2, k) + box(14.5, 10.5, 3, 5, 1.2, k) + line('M9.5 18.5 12 21l2.5-2.5', k),
+	// Sled Push: sled with two upright poles, pushed forward
+	hxSledPush: (k) => line('M7 13V6.5M11.5 13V6.5', k) + rect(4.5, 13, 11, 4.5, 1, k) + line('M3 20.5h14a2.5 2.5 0 0 0 2.5-2.5', k) + line('M15 6.5h6M18.5 4 21 6.5 18.5 9', k),
+	// Sled Pull: sled pulled back on a rope
+	hxSledPull: (k) => rect(11, 13, 9, 4.5, 1, k) + line('M11 15.25H5.5M4 12.5v5.5', k) + line('M9 20.5h11a2 2 0 0 0 1.5-2', k) + line('M10 7H3.5M6 4.5 3.5 7 6 9.5', k),
+	// Burpee Broad Jump: jump arc over the ground, take-off and landing
+	hxBurpee: (k) => line('M4.5 17C6 7 14 5 19.5 13', k) + line('M19.8 9.2 19.5 13l-3.6-1', k) + line('M2.5 20.5h19', k) + dot(4.5, 17.5, 1.6, k) + dot(19.5, 17.5, 1.6, k),
+	// Rowing: oar over the water
+	hxRow: (k) => line('M4.5 4.5 15 15', k) + box(13.2, 13.2, 5.5, 3.2, 1.2, k).replace('/>', ' transform="rotate(45 15.95 14.8)"/>') + line('M3 19.5c1.5-1.5 3-1.5 4.5 0s3 1.5 4.5 0 3-1.5 4.5 0 3 1.5 4.5 0', k),
+	// Farmers Carry: one kettlebell in each hand
+	hxFarmers: (k) => circle(6.5, 15.5, 4, k) + line('M4.3 12.2V9.5a2.2 2.2 0 0 1 4.4 0v2.7', k) + circle(17.5, 15.5, 4, k) + line('M15.3 12.2V9.5a2.2 2.2 0 0 1 4.4 0v2.7', k),
+	// Sandbag Lunges: sandbag with carry handle and straps
+	hxSandbag: (k) => rect(2.5, 9, 19, 10, 5, k) + line('M8.5 9V7.5a3.5 3.5 0 0 1 7 0V9M8.5 9v10M15.5 9v10', k),
+	// Wall Balls: ball thrown to the target
+	hxWallBall: (k) => circle(17, 7, 4, k) + dot(17, 7, 1.4, k) + circle(6.5, 17, 4, k) + line('M2.9 15.6c2.3 1 4.9 1 7.2 0M6.5 13c-1.2 2.6-1.2 5.4 0 8', k) + line('M9.5 12.5c1.5-2.5 3-4 5-4.5', k, ' stroke-dasharray="1.5 2.5"'),
 }
 
 module.exports = { CONTROL, MOTIF, STROKE: S }

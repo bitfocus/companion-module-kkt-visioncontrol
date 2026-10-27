@@ -2,6 +2,8 @@
 // the Companion presets (src/presets.js) and the tile images
 // (scripts/build-icons.cjs). Colors are 8-bit (0..255).
 //
+// label:    shorter text for the tile if the name does not fit (optional)
+// station:  Hyrox station number (race order), shown in the preset name
 // sec:      Seconds per color step, soft: fade share (0..1).
 //           src/fx.js converts this into StayTime/FadeTime/TimeMultiplier.
 // range:    Spread across the pixels; pattern effects use 10 by default.
@@ -70,6 +72,8 @@ const BASS_PULSE = { start: 3, min: 0, max: 255, threshold: 2500, eqStart: 0, eq
 
 const R = [255, 0, 0], G = [0, 255, 0], B = [0, 0, 255], W = [255, 255, 255], K = [0, 0, 0]
 const M = [255, 0, 255], C = [0, 255, 255], Y = [255, 255, 0], O = [255, 120, 0]
+// Hyrox race colors
+const HX_YELLOW = [255, 225, 0], HX_AMBER = [255, 150, 0]
 
 const CATALOG = [
 	// ---- Color cycles --------------------------------------------------------
@@ -121,6 +125,32 @@ const CATALOG = [
 	{ id: 'fit_cooldown', cat: 'Fitness: Classes', name: 'Cool-down', effect: 17, geometry: 2, colors: [[0, 90, 255], [0, 200, 255], [0, 150, 140]], sec: 2.5, soft: 0.9, dimmer: 70 },
 	{ id: 'fit_yoga', cat: 'Fitness: Classes', name: 'Yoga', effect: 0, colors: [[60, 40, 160], [150, 110, 255], [0, 140, 150]], sec: 12, soft: 0.97, dimmer: 45 },
 	{ id: 'fit_finish', cat: 'Fitness: Classes', name: 'Finish', effect: 9, geometry: 2, colors: [[0, 255, 80], W, [0, 255, 80]], sec: 0.4, soft: 0.3, dimmer: 100 },
+
+	// ---- Hyrox: race (8 × 1 km run, each followed by one station) -------------
+	// Base look in the race colors yellow/black; every discipline gets its own
+	// motif, pattern and colors so its button and the active state are unique.
+	{ id: 'hx_start', cat: 'Hyrox: Race', name: 'Start', motif: 'hxStart', effect: 0, colors: [R, HX_AMBER, HX_YELLOW, G], sec: 1, soft: 0, dimmer: 100 },
+	{ id: 'hx_run', cat: 'Hyrox: Race', name: 'Run 1 km', motif: 'hxRun', effect: 8, geometry: 2, colors: [HX_YELLOW, K], sec: 0.35, soft: 0.4, dimmer: 100 },
+	{ id: 'hx_roxzone', cat: 'Hyrox: Race', name: 'Roxzone', motif: 'hxRoxzone', effect: 15, geometry: 2, colors: [HX_YELLOW, [70, 60, 0]], sec: 0.6, soft: 0.6, dimmer: 85 },
+	{ id: 'hx_finish', cat: 'Hyrox: Race', name: 'Finish', motif: 'hxFinish', effect: 19, geometry: 2, colors: [HX_YELLOW, K], sec: 0.5, soft: 0.1, dimmer: 100 },
+
+	// ---- Hyrox: stations in race order ---------------------------------------------
+	// 1 SkiErg: double-pole pulls from top to bottom (rain running downwards)
+	{ id: 'hx_skierg', cat: 'Hyrox: Stations', station: 1, name: 'SkiErg', motif: 'hxSkiErg', effect: 17, geometry: 2, reverse: true, colors: [W, [0, 170, 255], [0, 30, 90]], sec: 0.7, soft: 0.6, dimmer: 100 },
+	// 2 Sled Push: heavy, slow wall pushed forward
+	{ id: 'hx_sled_push', cat: 'Hyrox: Stations', station: 2, name: 'Sled Push', motif: 'hxSledPush', effect: 4, geometry: 2, colors: [[255, 40, 0], [90, 0, 0]], sec: 1.6, soft: 0.5, dimmer: 100 },
+	// 3 Sled Pull: the same wall pulled back towards the athlete
+	{ id: 'hx_sled_pull', cat: 'Hyrox: Stations', station: 3, name: 'Sled Pull', motif: 'hxSledPull', effect: 4, geometry: 2, reverse: true, colors: [O, [80, 0, 110]], sec: 1.6, soft: 0.5, dimmer: 100 },
+	// 4 Burpee Broad Jumps: explosive jumps forward and up
+	{ id: 'hx_burpee', cat: 'Hyrox: Stations', station: 4, name: 'Burpee Broad Jumps', label: 'Burpee Jumps', motif: 'hxBurpee', effect: 9, geometry: 2, colors: [HX_YELLOW, K, W], sec: 0.3, soft: 0.1, dimmer: 100 },
+	// 5 Rowing: stroke and recovery, the split wall moves out and back
+	{ id: 'hx_row', cat: 'Hyrox: Stations', station: 5, name: 'Rowing', motif: 'hxRow', effect: 6, geometry: 2, bounce: true, colors: [[0, 110, 255], [0, 220, 200]], sec: 1.2, soft: 0.85, dimmer: 100 },
+	// 6 Farmers Carry: steady steps with weight in both hands
+	{ id: 'hx_farmers', cat: 'Hyrox: Stations', station: 6, name: 'Farmers Carry', motif: 'hxFarmers', effect: 7, geometry: 2, colors: [[0, 210, 90], [0, 50, 25]], sec: 0.9, soft: 0.4, dimmer: 100 },
+	// 7 Sandbag Lunges: left and right leg alternate (halves alternate)
+	{ id: 'hx_lunges', cat: 'Hyrox: Stations', station: 7, name: 'Sandbag Lunges', motif: 'hxSandbag', effect: 2, geometry: 2, colors: [[240, 170, 50], [110, 50, 0]], sec: 0.8, soft: 0.5, dimmer: 100 },
+	// 8 Wall Balls: throw to the target and catch, rings out and back
+	{ id: 'hx_wallballs', cat: 'Hyrox: Stations', station: 8, name: 'Wall Balls', motif: 'hxWallBall', effect: 13, geometry: 2, bounce: true, colors: [HX_YELLOW, [255, 0, 80]], sec: 0.45, soft: 0.3, dimmer: 100 },
 ]
 
 // Single-color tiles for the color presets
